@@ -27,12 +27,18 @@ SOURCES += \
         main.cpp \
         loginwindow.cpp \
     titlebar.cpp \
-    accountitem.cpp
+    accountitem.cpp \
+    mainwindow.cpp \
+    groupitem.cpp \
+    mainwindowboard.cpp
 
 HEADERS += \
         loginwindow.h \
     titlebar.h \
-    accountitem.h
+    accountitem.h \
+    mainwindow.h \
+    groupitem.h \
+    mainwindowboard.h
 
 FORMS += \
         loginwindow.ui

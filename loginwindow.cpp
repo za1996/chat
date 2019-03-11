@@ -2,6 +2,7 @@
 #include "ui_loginwindow.h"
 #include "titlebar.h"
 #include "accountitem.h"
+#include "mainwindow.h"
 
 #include <QGraphicsDropShadowEffect>
 #include <QLabel>
@@ -196,6 +197,8 @@ void LoginWindow::onRemoveAccount(int m_item)
 
 void LoginWindow::onLoginIn()
 {
+    MainWindow *w = new MainWindow();
+    w->show();
     qDebug("Login In\n");
 }
 

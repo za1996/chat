@@ -3,7 +3,12 @@
 #include "titlebar.h"
 #include "accountitem.h"
 #include "mainwindow.h"
+#include "message.h"
+#include "global.h"
 
+#include <nlohmann/json.hpp>
+
+#include <memory>
 #include <QGraphicsDropShadowEffect>
 #include <QLabel>
 #include <QBitmap>
@@ -12,6 +17,9 @@
 #include <QLineEdit>
 #include <QFile>
 #include <QDebug>
+#include <QtNetwork>
+#include <list>
+#include <QMessageBox>
 
 LoginWindow::LoginWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -44,7 +52,7 @@ void LoginWindow::init()
 
     // 初始化窗口的设置
     this->setFixedSize(this->width(), this->height());
-    this->setWindowFlags(Qt::X11BypassWindowManagerHint | Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
+    this->setWindowFlags(Qt::X11BypassWindowManagerHint | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_TranslucentBackground);
     initLoginBorder();
     initTitleBar();
@@ -53,7 +61,7 @@ void LoginWindow::init()
     // 账号行初始化
     ui->accountComboBox->setEditable(true);
     QLineEdit *accountEdit = ui->accountComboBox->lineEdit();
-    accountEdit->setPlaceholderText("QQ号码/手机/邮箱");
+    accountEdit->setPlaceholderText("号码");
 
     // 头像mask
     QBitmap mask(ui->headPix->size());
@@ -67,6 +75,7 @@ void LoginWindow::init()
 
     // 密码行初始化
     ui->passwordEdit->setPlaceholderText("密码");
+//    ui->passwordEdit->setEchoMode(QLineEdit::Password);
 
     // 初始化信号和槽的绑定
     // do something...
@@ -197,9 +206,49 @@ void LoginWindow::onRemoveAccount(int m_item)
 
 void LoginWindow::onLoginIn()
 {
-    MainWindow *w = new MainWindow();
-    w->show();
-    qDebug("Login In\n");
+    using json = nlohmann::json;
+    auto m = Message::CreateObject();
+    m->setHead(ui->accountComboBox->currentText().toInt(), SERVERID, LOGINEVENTGROUP, LOGINACTION, 0);
+    json j;
+    j["ID"] = ui->accountComboBox->currentText().toInt();
+    j["PWD"] = ui->passwordEdit->text().toStdString();
+    qDebug() << "pwd : " << ui->passwordEdit->text().toStdString().c_str();
+    std::string str = j.dump();
+    m->setData(str.c_str(), str.size() + 1);
+    s.write((char *)m->tobuf(), m->size());
+    qDebug() << "socket state : " << s.state();
+    while(s.waitForReadyRead())
+    {
+        std::list<MessagePtr> mlist;
+        if(getMessage(s, 1, mlist) <= 0) continue;
+        else
+        {
+            qDebug() << "list size : " << mlist.size();
+            m = mlist.front();
+            break;
+        }
+    }
+    if(!m->isError())
+    {
+        MainWindow *w = new MainWindow(ui->accountComboBox->currentText().toInt());
+        w->show();
+    }
+    else
+    {
+        qDebug() << "data : " << m->data();
+        json info = json::parse((char *)m->data());
+        std::string str = info["Msg"].get<std::string>();
+        QMessageBox::information(nullptr, "Error", QString::fromStdString(str), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+    }
 }
 
+void LoginWindow::onLoginRes()
+{
+//    std::list<std::shared_ptr<Message>> mlist = getMessage(s, 1);
+//    qDebug() << "mlist size : " << mlist.size();
+//    if(mlist.size() < 1) return;
+//    std::shared_ptr<Message> &m = mlist.front();
+//    QDebug q = qDebug();
+//    m->operator <<(q);
+}
 

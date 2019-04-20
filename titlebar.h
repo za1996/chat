@@ -69,6 +69,7 @@ private:
     void initConnections();
 
 
+
 protected:
 
 
@@ -114,6 +115,7 @@ private:
     int m_windowBorderWidth;
     // 标题栏是否透明;
     bool m_isTransparent;
+
 
 
 };

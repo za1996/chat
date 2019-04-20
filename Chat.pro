@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -22,15 +22,20 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+INCLUDEPATH += "C:/Users/29069/Downloads/Compressed/include/include"
+
 
 SOURCES += \
         main.cpp \
         loginwindow.cpp \
     titlebar.cpp \
     accountitem.cpp \
-    mainwindow.cpp \
     groupitem.cpp \
-    mainwindowboard.cpp
+    mainwindow.cpp \
+    personalinfo.cpp \
+    message.cpp \
+    groupiteminfo.cpp \
+    global.cpp
 
 HEADERS += \
         loginwindow.h \
@@ -38,7 +43,13 @@ HEADERS += \
     accountitem.h \
     mainwindow.h \
     groupitem.h \
-    mainwindowboard.h
+    mainwindow.h \
+    personalinfo.h \
+    message.h \
+    groupiteminfo.h \
+    global.h \
+    messagetype.h
 
 FORMS += \
-        loginwindow.ui
+        loginwindow.ui \
+    personalinfo.ui

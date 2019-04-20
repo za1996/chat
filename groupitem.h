@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QLabel>
 
+
 class GroupItem : public QWidget
 {
     Q_OBJECT

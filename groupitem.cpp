@@ -4,6 +4,7 @@
 #include <QPainter>
 #include <QPoint>
 #include <QAction>
+#include <QDebug>
 
 GroupItem::GroupItem(QWidget *parent, void *item) : QWidget(parent)
 {
@@ -50,6 +51,7 @@ GroupItem::GroupItem(QWidget *parent, void *item) : QWidget(parent)
 
 GroupItem::~GroupItem()
 {
+    qDebug() << "~GroupItem";
     delete m_Profile;
     delete m_Name;
     delete m_Desc;

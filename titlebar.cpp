@@ -4,6 +4,10 @@
 #include <QFile>
 #include <QMouseEvent>
 #include <QObject>
+#include <QPropertyAnimation>
+#include <QDesktopWidget>
+#include <QApplication>
+#include <QDebug>
 
 #define BUTTON_HEIGHT 30        // 按钮高度;
 #define BUTTON_WIDTH 30         // 按钮宽度;
@@ -270,6 +274,7 @@ void TitleBar::mouseReleaseEvent(QMouseEvent *event)
     m_isPressed = false;
     return QWidget::mouseReleaseEvent(event);
 }
+
 
 // 加载本地样式文件;
 // 可以将样式直接写在文件中，程序运行时直接加载进来;

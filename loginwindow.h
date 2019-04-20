@@ -7,10 +7,14 @@
 #include <QMainWindow>
 #include <QString>
 #include <QListWidget>
+#include <QtNetwork>
 
 namespace Ui {
 class LoginWindow;
 }
+
+extern QTcpSocket s;
+
 
 class LoginWindow : public QMainWindow
 {
@@ -39,6 +43,7 @@ private slots:
     void onShowAccountInfo(QString filePath, QString accountName);
     void onLoginIn();
     void onRemoveAccount(int m_item);
+    void onLoginRes();
 
 private:
     Ui::LoginWindow *ui;

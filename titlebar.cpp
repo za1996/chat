@@ -118,6 +118,8 @@ void TitleBar::setTitleContent(QString titleContent, int titleFontSize)
     // 设置标题内容;
     m_pTitleContent->setText(titleContent);
     m_titleContent = titleContent;
+
+    m_pTitleContent->setAlignment(Qt::AlignCenter);
 }
 
 // 设置标题栏长度;

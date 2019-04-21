@@ -3,6 +3,7 @@
 #include "personalinfo.h"
 #include "message.h"
 #include "global.h"
+#include "chatwindow.h"
 #include <nlohmann/json.hpp>
 #include "groupiteminfo.h"
 #include <functional>
@@ -112,7 +113,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 
     UpdatePos();
 
-    connect(m_TitleBar, SIGNAL(signalButtonCloseClicked()), this, SLOT(close()));
+    connect(m_TitleBar, SIGNAL(signalButtonCloseClicked()), qApp, SLOT(quit()));
     connect(m_GroupTree, SIGNAL(itemClicked(QTreeWidgetItem*,int)), this, SLOT(onGroupItemClick(QTreeWidgetItem*,int)));
     connect(m_GroupTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)), this, SLOT(onGroupItemDoubleClick(QTreeWidgetItem*,int)));
     connect(m_addGroup, SIGNAL(triggered(bool)), this, SLOT(AddUserGroup()));
@@ -643,6 +644,8 @@ void MainWindow::onGroupItemDoubleClick(QTreeWidgetItem *pitem, int col)
         // open the chat
         // write code
 
+        ChatWindow *w = new ChatWindow();
+        w->show();
     }
 }
 

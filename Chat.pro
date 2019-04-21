@@ -35,7 +35,9 @@ SOURCES += \
     personalinfo.cpp \
     message.cpp \
     groupiteminfo.cpp \
-    global.cpp
+    global.cpp \
+    chatwindow.cpp \
+    videowindow.cpp
 
 HEADERS += \
         loginwindow.h \
@@ -48,8 +50,12 @@ HEADERS += \
     message.h \
     groupiteminfo.h \
     global.h \
-    messagetype.h
+    messagetype.h \
+    chatwindow.h \
+    videowindow.h
 
 FORMS += \
         loginwindow.ui \
-    personalinfo.ui
+    personalinfo.ui \
+    chatwindow.ui \
+    videowindow.ui

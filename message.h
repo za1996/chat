@@ -8,6 +8,16 @@
 
 
 
+struct UdpPacket
+{
+    uint32_t packetNum;
+    uint64_t time;
+    uint16_t size;
+    uint16_t totalSize;
+    uint32_t bitlist;
+    std::vector<uchar> data;
+};
+
 
 
 #pragma pack(push)
@@ -35,13 +45,17 @@ public:
 
     void setHead(uint32_t srcId, uint32_t destId, uint32_t mType1, uint32_t mType2, uint32_t flag);
     void setHead(const MsgHead& head);
+    void setUdpInfo(uint16_t totalSize, uint16_t packetStart, uint32_t packetNum, uint64_t time);
 
     void setData(const char* buf, const int n);
     void setData(const std::string &data);
+    void setRawSize(const int n);
+    void refresh();
     const void* data() { return m_data; }
     size_t size();
 
     const void* tobuf();
+    char* rawBuf() { return m_buf; }
 
     bool hasHead() { return m_hasHead; }
     bool isError() { return TypeGroup() == SYSRESEVENTGROUP && TypeCode() == SYSRESERRORCODE; }
@@ -52,7 +66,10 @@ public:
     uint32_t Type() { return m_msgHead.msg_type; }
     uint32_t dataSize() { return m_msgHead.msg_len; }
 
+    void getUdpInfo(uint32_t &packetNum, uint16_t &totalSize, uint16_t &packetStart, uint64_t &time);
+
     QDebug& operator <<(QDebug &s);
+    void showUdpInfo();
 
 private:
     Message();

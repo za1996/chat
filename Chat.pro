@@ -37,7 +37,8 @@ SOURCES += \
     groupiteminfo.cpp \
     global.cpp \
     chatwindow.cpp \
-    videowindow.cpp
+    videowindow.cpp \
+    udprecvicer.cpp
 
 HEADERS += \
         loginwindow.h \
@@ -52,10 +53,18 @@ HEADERS += \
     global.h \
     messagetype.h \
     chatwindow.h \
-    videowindow.h
+    videowindow.h \
+    udprecvicer.h \
+    concurrentqueue.h
 
 FORMS += \
         loginwindow.ui \
     personalinfo.ui \
     chatwindow.ui \
     videowindow.ui
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../openCV/opencv/build/x64/vc15/lib/ -lopencv_world401
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../openCV/opencv/build/x64/vc15/lib/ -lopencv_world401d
+
+INCLUDEPATH += $$PWD/../../openCV/opencv/build/include
+DEPENDPATH += $$PWD/../../openCV/opencv/build/include

@@ -6,6 +6,7 @@
 #include "chatwindow.h"
 #include <nlohmann/json.hpp>
 #include "groupiteminfo.h"
+#include "udprecvicer.h"
 #include <functional>
 #include <iostream>
 
@@ -27,15 +28,17 @@
 #include <assert.h>
 #include <QMessageBox>
 #include <QTimer>
+#include <map>
 
 using nlohmann::json;
-
+using namespace cv;
 
 MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     QWidget(parent)
   , m_bIsAutoHide(false)
   , m_enDriection(NONE)
   , m_UserId(UserId)
+  , m_UdpPort(-1)
 {
     this->setWindowFlags(Qt::X11BypassWindowManagerHint | Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
 
@@ -109,7 +112,9 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 
     m_UserDesc->setText("UserDesc");
 
-
+    m_FriendUdpPacketMap.insert(m_UserId, std::map<uint64_t, UdpPacket*>());
+    m_FriendDataQueueMap.insert(std::pair<uint32_t, moodycamel::ConcurrentQueue<UdpPacket*>>(m_UserId, moodycamel::ConcurrentQueue<UdpPacket*>()));
+//    m_UdpSocket.setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 1024 * 1024 * 4);
 
     UpdatePos();
 
@@ -117,6 +122,11 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     connect(m_GroupTree, SIGNAL(itemClicked(QTreeWidgetItem*,int)), this, SLOT(onGroupItemClick(QTreeWidgetItem*,int)));
     connect(m_GroupTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)), this, SLOT(onGroupItemDoubleClick(QTreeWidgetItem*,int)));
     connect(m_addGroup, SIGNAL(triggered(bool)), this, SLOT(AddUserGroup()));
+    connect(&m_ShowVideoTimer, SIGNAL(timeout()), this, SLOT(ShowVideo()));
+
+
+//    connect(&m_UdpTimer, SIGNAL(timeout()), this, SLOT(UdpSend()));
+//    connect(&m_UdpSocket, SIGNAL(readyRead()), this, SLOT(UdpRead()));
 
     qDebug() << "TitleBar Height" << m_TitleBar->height() << endl;
 
@@ -369,6 +379,29 @@ void MainWindow::ChangeFriendsGroup(MessagePtr m)
     }
 }
 
+void MainWindow::ReadyReadUdpData(MessagePtr m)
+{
+    QDebug q = qDebug();
+    q << __FUNCTION__;
+    m->operator <<(q);
+    json info = json::parse((char *)m->data());
+    uint32_t FriendId = info["FriendId"].get<json::number_unsigned_t>();
+    m_UdpPort = info["Port"].get<int>();
+    auto it = m_FriendsChatMap.find(FriendId);
+    if(m_FriendsChatMap.end() != it)
+    {
+        q << "in Timer start ";
+        q << m_UdpChatList.size();
+        if(!m_UdpChatList.size())
+//            m_UdpTimer.start(35);
+
+
+        if((*it)->isUdpChatNow())
+            m_UdpChatList.push_back(FriendId);
+    }
+    emit HasMessage(FriendId, m);
+}
+
 //private
 
 void MainWindow::InitHandle()
@@ -380,6 +413,8 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESADDFRIENDSGROUPCODE), std::bind(&MainWindow::AddFriendsGroup, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESDELFRIENDSCODE), std::bind(&MainWindow::DeleteFriends, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESCHANGEFRIENDSGROUPCODE), std::bind(&MainWindow::ChangeFriendsGroup, this, std::placeholders::_1));
+
+    m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE), std::bind(&MainWindow::ReadyReadUdpData, this, std::placeholders::_1));
 }
 
 
@@ -394,6 +429,41 @@ void MainWindow::UpdatePos()
     m_UserDesc->move(m_UserName->pos().x(), m_UserName->pos().y() + m_UserName->height() + SPACESIZE);
     m_SerachLineEdit->move(0, m_Profile->pos().y() + m_Profile->height() + SPACESIZE);
     m_GroupTree->move(0, m_SerachLineEdit->pos().y() + m_SerachLineEdit->height());
+}
+
+QImage MainWindow::MatToQImage(cv::Mat mtx)
+{
+    switch (mtx.type())
+    {
+    case CV_8UC1:
+        {
+            qDebug() << "CV_8UC1";
+            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols, QImage::Format_Grayscale8);
+            return img;
+        }
+        break;
+    case CV_8UC3:
+        {
+            qDebug() << "CV_8UC3";
+            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols * 3, QImage::Format_RGB888);
+            return img.rgbSwapped();
+        }
+        break;
+    case CV_8UC4:
+        {
+            qDebug() << "CV_8UC4";
+            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols * 4, QImage::Format_ARGB32);
+            return img;
+        }
+        break;
+    default:
+        {
+            qDebug() << "DEFAULT";
+            QImage img;
+            return img;
+        }
+        break;
+    }
 }
 
 void MainWindow::DelGroupItem(uint32_t Id, bool clear)
@@ -477,6 +547,31 @@ error:
     //网络异常则会运行到这里
     qDebug() << "error\n";
     this->close();
+}
+
+void MainWindow::CreateChatWindow(uint32_t FriendId)
+{
+    auto it = m_FriendsChatMap.find(FriendId);
+    if(it == m_FriendsChatMap.end())
+    {
+        ChatWindow *w = new ChatWindow(m_UserId, FriendId);
+        connect(this, SIGNAL(HasMessage(uint32_t,std::shared_ptr<Message>)), w, SLOT(HandleMessage(uint32_t,std::shared_ptr<Message>)));
+        m_FriendsChatMap.insert(FriendId, w);
+        w->SetDelHandle(std::bind(&MainWindow::DelChatWindow, this, std::placeholders::_1));
+        w->show();
+    }
+    else
+    {
+        (*it)->raise();
+    }
+    qDebug() << __FUNCTION__ << m_FriendsChatMap;
+}
+
+void MainWindow::DelChatWindow(uint32_t FriendId)
+{
+    m_FriendsChatMap.remove(FriendId);
+    m_UdpChatList.remove(FriendId);
+    qDebug() << __FUNCTION__ << m_FriendsChatMap;
 }
 
 bool MainWindow::InitMySelf()
@@ -584,7 +679,7 @@ bool MainWindow::InitFriends()
 void MainWindow::HandleMessage(uint32_t id, std::shared_ptr<Message> m)
 {
     qDebug() << "HandleMessage " << id;
-    if(SERVERID == id || false)
+    if(SERVERID == id || m_FriendsChatMap.find(id) == m_FriendsChatMap.end())
     {
         auto it = m_HandleMap.find(m->Type());
         if(it != m_HandleMap.end())
@@ -644,9 +739,17 @@ void MainWindow::onGroupItemDoubleClick(QTreeWidgetItem *pitem, int col)
         // open the chat
         // write code
 
-        ChatWindow *w = new ChatWindow();
-        w->show();
+//        CreateChatWindow(pitem->data(0, Qt::UserRole).value<uint32_t>());
     }
+    UdpRecvicer *recvicer = new UdpRecvicer();
+    recvicer->SetMeId(m_UserId);
+    recvicer->SetFriendId(0);
+    m_VideoLabel.move(20, 20);
+    m_VideoLabel.resize(320, 240);
+    m_VideoLabel.show();
+    recvicer->start(QThread::HighPriority);
+    m_ShowVideoTimer.start(150);
+//    m_UdpTimer.start(60);
 }
 
 void MainWindow::DelGroupItem(void *item)
@@ -715,3 +818,144 @@ void MainWindow::ShowGroupItemInfo(void *item)
     SendtoRemote(s, m);
 
 }
+
+void MainWindow::ShowVideo()
+{
+    auto it = m_FriendDataQueueMap.find(m_UserId);
+    UdpPacket* Packet;
+    if(it != m_FriendDataQueueMap.end())
+    {
+        if(it->second.try_dequeue(Packet))
+        {
+                Mat frame;
+                frame = imdecode(Mat(Packet->data), IMREAD_COLOR);
+                m_VideoLabel.setPixmap(QPixmap::fromImage(MatToQImage(frame)).scaled(m_VideoLabel.width(), m_VideoLabel.height()));
+
+        }
+    }
+}
+
+//void MainWindow::UdpSend()
+//{
+//    static int count = 0;
+//    static std::string str(10000, 'a');
+//    if(!m_UdpChatList.size())
+//    {
+//        m_UdpTimer.stop();
+//        return;
+//    }
+//    else
+//    {
+//        int FriendId = m_UdpChatList.front();
+//        auto m = CreateUdpChatMsg(FriendId, m_UserId, UDPTRANSFERMSG, 0, str);
+//        m_UdpSocket.writeDatagram((char *)m->tobuf(), m->size(), QHostAddress("129.204.4.80"), m_UdpPort);
+//    }
+//    UdpSendToRemote(0, count++, str.c_str(), str.size() + 1);
+//}
+
+//void MainWindow::UdpRead()
+//{
+//    static uint64_t maxTimeOk = 0;
+//    static int count = 0;
+//    uint64_t Currenttime = QDateTime::currentDateTime().toMSecsSinceEpoch();
+////        for(auto packetMapIt = m_FriendUdpPacketMap.begin(); packetMapIt != m_FriendUdpPacketMap.end(); ++packetMapIt)
+////        {
+////            auto UdpTimeMap = packetMapIt->first;
+////            auto UdpPacketMap = packetMapIt->second;
+////            auto end = UdpTimeMap.upper_bound(Currenttime - UDP_MAX_DELAY);
+////            for(auto it = UdpTimeMap.begin(); it != end; ++it)
+////            {
+////                auto packetItemIt = UdpPacketMap.find(it->second);
+////                if(packetItemIt != UdpPacketMap.end())
+////                {
+////                    delete packetItemIt->second;
+////                    UdpPacketMap.erase(packetItemIt);
+
+////                }
+////            }
+////            UdpTimeMap.erase(UdpTimeMap.begin(), end);
+////        }
+//    while(m_UdpSocket.hasPendingDatagrams())
+//    {
+//        qDebug() << __FUNCTION__;
+//        int size = m_UdpSocket.pendingDatagramSize();
+//        uint64_t time;
+//        uint32_t packetNum;
+//        uint16_t totalSize, packetStart, packetSize;
+//        UdpPacket *packet;
+//        auto m = Message::CreateObject();
+//        m->setRawSize(size);
+//        m_UdpSocket.readDatagram(m->rawBuf(), size);
+//        m->refresh();
+//        auto packetIt = m_FriendUdpPacketMap.find(m->srcId());
+//        assert(packetIt != m_FriendUdpPacketMap.end());
+//        std::map<uint16_t, UdpPacket*> &UdpPacketMap = packetIt->second;
+//        std::map<uint64_t, uint16_t> &UdpTimeMap = packetIt->first;
+//        m->getUdpInfo(packetNum, totalSize, packetStart, time);
+//        packetSize = size - sizeof(MsgHead);
+//        qDebug() << count++ << " " << size << " " << totalSize << " " << " " << time;
+//        if(time > Currenttime - UDP_MAX_DELAY)
+//        {
+//            auto it = UdpPacketMap.find(packetNum);
+//            if(it != UdpPacketMap.end())
+//                packet = it->second;
+//            else
+//            {
+//                packet = new UdpPacket;
+//                packet->size = 0;
+//                packet->bitlist = 0;
+//                packet->time = time;
+//                packet->totalSize = totalSize;
+//                packet->data = std::shared_ptr<char>(new char[totalSize]);
+//                UdpPacketMap.insert(std::pair<uint16_t, UdpPacket*>(packetNum, packet));
+//                UdpTimeMap.insert(std::pair<uint64_t, uint16_t>(time, packetNum));
+//            }
+
+//            memcpy(packet->data.get() + packetStart, m->data(), packetSize);
+//            packet->size += packetSize;
+//            qDebug() << count++ << " " << size << " " << totalSize << " " << packet->size << " " << time;
+//            if(packet->size == totalSize && time > maxTimeOk)
+//            {
+//                maxTimeOk = time;
+//                qDebug() << "isok" << " PackNum : " << packetNum << " time:" << time << "current time : " << Currenttime;
+//            }
+
+//        }
+//    }
+
+
+////        if(maxTimeOk > Currenttime - UDP_MAX_DELAY)
+////        {
+////            for(auto packetMapIt = m_FriendUdpPacketMap.begin(); packetMapIt != m_FriendUdpPacketMap.end(); ++packetMapIt)
+////            {
+////                std::list<std::pair<uint64_t, UdpPacket*>> dataList;
+////                auto UdpTimeMap = packetMapIt->first;
+////                auto UdpPacketMap = packetMapIt->second;
+////                auto end = UdpTimeMap.upper_bound(maxTimeOk);
+////                for(auto it = UdpTimeMap.begin(); it != end; ++it)
+////                {
+////                    auto packetItemIt = UdpPacketMap.find(it->second);
+////                    if(packetItemIt != UdpPacketMap.end() && packetItemIt->second->totalSize == packetItemIt->second->size)
+////                    {
+////                        qDebug() << "totalsize : " << packetItemIt->second->totalSize << " time : " << packetItemIt->second->time;
+////                        dataList.push_back(std::pair<uint64_t, UdpPacket*>(packetItemIt->second->time, packetItemIt->second));
+////                        UdpPacketMap.erase(packetItemIt);
+////                    }
+////                }
+////                UdpTimeMap.erase(UdpTimeMap.begin(), end);
+////            }
+////        }
+
+//}
+
+//void MainWindow::UdpSendToRemote(uint32_t FriendId, int PacketNum, const char *data, int size)
+//{
+//    const static int MAX_SIZE = 1472 - 36;
+//    uint64_t time = QDateTime::currentDateTime().toMSecsSinceEpoch();
+//    for(int start = 0; start < size; start += UDP_MAX_SIZE)
+//    {
+//        int PacketSize = (start + UDP_MAX_SIZE) <= size ? UDP_MAX_SIZE : (size - start);
+//        auto m = CreateUdpChatMsg(FriendId, m_UserId, UDPTRANSFERMSG, 0, (data + start), size, start, PacketSize, PacketNum, time);
+//        m_UdpSocket.writeDatagram((char *)m->tobuf(), m->size(), QHostAddress("129.204.4.80"), 9000);
+//    }
+//}

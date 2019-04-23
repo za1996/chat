@@ -8,9 +8,15 @@ VideoWindow::VideoWindow(QWidget *parent) :
     ui->setupUi(this);
     this->setStyleSheet("QWidget#VideoWindow{background-color:transparent;}");
     ui->Video->setStyleSheet("QLabel{background-color:rgb(255,255, 255);}");
+    connect(ui->CloseButton, SIGNAL(clicked(bool)), this, SLOT(OnClosePress()));
 }
 
 VideoWindow::~VideoWindow()
 {
     delete ui;
+}
+
+void VideoWindow::OnClosePress()
+{
+    emit VideoWindowCloseButtonClick();
 }

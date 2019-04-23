@@ -1,4 +1,5 @@
 #include "message.h"
+#include "concurrentqueue.h"
 
 #include <list>
 #include <vector>
@@ -8,6 +9,8 @@
 using json = nlohmann::json;
 
 QTcpSocket s;
+QHash<uint32_t, std::map<uint64_t, UdpPacket*>> m_FriendUdpPacketMap;
+std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacket*>> m_FriendDataQueueMap;
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist)
 {
@@ -120,3 +123,32 @@ MessagePtr CreateChangeFriendsGroupMsg(uint32_t GroupId, const std::vector<uint3
     m->setData(info.dump());
     return m;
 }
+
+MessagePtr CreateReqUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["FriendId"] = FriendId;
+    m->setHead(srcID, FriendId, REQUDPEVENTGROUP, action, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag, const char *data, uint16_t totalSize, uint16_t packetStart, uint16_t packetSize, uint32_t packetNum, uint64_t time)
+{
+    auto m = Message::CreateObject();
+    m->setHead(srcID, FriendId, UDPEVENTGROUP, action, flag);
+    m->setUdpInfo(totalSize, packetStart, packetNum, time);
+    m->setData(data, packetSize);
+    return m;
+}
+
+MessagePtr CreateUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag, const std::string &str)
+{
+    auto m = Message::CreateObject();
+    m->setHead(srcID, FriendId, UDPEVENTGROUP, action, flag);
+    m->setData(str);
+    return m;
+}
+
+

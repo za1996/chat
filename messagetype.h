@@ -7,9 +7,14 @@
 #define LOGINEVENTGROUP 0x0
 #define REQINFOGROUP 0x1
 #define CHANGEINFOGROUP 0x2
+#define REQUDPEVENTGROUP 0x3
+#define UDPEVENTGROUP 0xff
+
+#define RESUDPREQGROUP 0xfffc
 #define RESCHANGEGROUP 0xfffd
 #define RESINFOGROUP 0xfffe
 #define SYSRESEVENTGROUP 0xffff
+
 
 
 //0x0
@@ -29,6 +34,20 @@
 #define DELFRIENDSACTION 0x2
 #define CHANGEFRIENDSGROUPACTION 0x3
 
+//0x3
+#define REQUDPCHATACTION 0x0
+#define REQCLOSEUDPCHATACTION 0x1
+#define REQUDPCHATSUCCESSACTION 0x2
+
+
+//0xff
+#define UDPADDENDPOINT 0x0
+#define UDPTRANSFERMSG 0x1
+
+
+//0xfffc
+#define RESREADYUDPCHATSENDCODE 0x0
+#define RESCLOSEUDPCHATCODE 0x1
 
 
 //0xfffd
@@ -54,6 +73,7 @@
 #define MESSAGETYPE(t1, t2) (((t1) << 16) | (t2))
 #define TYPEGROUP(t) ((t) >> 16)
 #define TYPEACTION(t) ((t) & 0xffff)
+
 
 
 #endif // MESSAGETYPE_H

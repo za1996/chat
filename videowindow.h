@@ -17,6 +17,12 @@ public:
 
 private:
     Ui::VideoWindow *ui;
+
+signals:
+    void VideoWindowCloseButtonClick();
+
+private slots:
+    void OnClosePress();
 };
 
 #endif // VIDEOWINDOW_H

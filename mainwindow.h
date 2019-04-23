@@ -7,12 +7,17 @@
 #include <QLineEdit>
 #include <QPaintEvent>
 #include <QHash>
+#include <QUdpSocket>
 #include <stdint.h>
-#include <stdint.h>
+#include <list>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/dnn.hpp>
 
 #include "titlebar.h"
 #include "groupiteminfo.h"
 #include "message.h"
+#include "chatwindow.h"
 
 class MainWindow : public QWidget
 {
@@ -28,6 +33,7 @@ private:
     QLabel *m_Profile;
     QLabel *m_UserName;
     QLabel *m_UserDesc;
+    QLabel m_VideoLabel;
     QLineEdit *m_SerachLineEdit;
     QWidget *m_MainBoard;
     QAction *m_addGroup;
@@ -36,8 +42,14 @@ private:
     QHash<uint32_t, GroupItemInfoPtr> *m_FriendsMap;
     QHash<uint32_t, QTreeWidgetItem *> m_FriendsItemMap;
     QHash<uint32_t, std::function<void(MessagePtr)>> m_HandleMap;
+    QHash<uint32_t, ChatWindow *> m_FriendsChatMap;
+
     const uint32_t m_UserId;
     GroupItemInfoPtr m_Me;
+    QTimer m_ShowVideoTimer;
+    std::list<uint32_t> m_UdpChatList;
+
+    int m_UdpPort;
 
     enum {CHECKLEN = 12};
 
@@ -68,6 +80,10 @@ private:
     bool InitFriends();
     void AddUserGroup(QString &Name, uint32_t GroupID);
     void InitHandle();
+    void CreateChatWindow(uint32_t);
+    void DelChatWindow(uint32_t);
+    void UdpSendToRemote(uint32_t FriendId, int PacketNum, const char *data, int size);
+    QImage MatToQImage(cv::Mat mtx);
 
 
     void ShowUserInfo(MessagePtr);
@@ -75,6 +91,7 @@ private:
     void AddFriendsGroup(MessagePtr);
     void DeleteFriends(MessagePtr);
     void ChangeFriendsGroup(MessagePtr);
+    void ReadyReadUdpData(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -99,6 +116,9 @@ private slots:
     void ShowGroupItemInfo(void *item);
     void MessageRead();
     void HandleMessage(uint32_t, std::shared_ptr<Message>);
+//    void UdpSend();
+//    void UdpRead();
+    void ShowVideo();
 };
 
 #endif // MAINWINDOW_H

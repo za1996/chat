@@ -6,6 +6,7 @@
 #include <memory>
 #include <QtNetwork>
 #include "message.h"
+#include "concurrentqueue.h"
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist);
 bool SendtoRemote(QTcpSocket &s, MessagePtr m);
@@ -15,6 +16,14 @@ MessagePtr CreateChangeUserNameMsg(uint32_t changeID, const QString &Name, uint3
 MessagePtr CreateAddUserGroupMsg(const QString &UserGroupName, uint32_t srcID, uint32_t flag);
 MessagePtr CreateDelFriendsMsg(const std::vector<uint32_t> &IDList, uint32_t srcID, uint32_t flag);
 MessagePtr CreateChangeFriendsGroupMsg(uint32_t GroupId, const std::vector<uint32_t> &IDList, uint32_t srcID, uint32_t flag);
+MessagePtr CreateReqUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag);
+MessagePtr CreateUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag, const char *data, uint16_t totalSize, uint16_t packetStart, uint16_t packetSize, uint32_t packetNum, uint64_t time);
+MessagePtr CreateUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag, const std::string &str);
 extern QTcpSocket s;
+extern QHash<uint32_t, std::map<uint64_t, UdpPacket*>> m_FriendUdpPacketMap;
+extern std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacket*>> m_FriendDataQueueMap;
+#define UDP_MAX_SIZE 14336
+#define UDP_MAX_DELAY 200
+#define TIMEMAGICNUMER 60000
 
 #endif // GLOBAL_H

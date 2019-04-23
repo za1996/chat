@@ -232,6 +232,7 @@ void LoginWindow::onLoginIn()
     {
         MainWindow *w = new MainWindow(ui->accountComboBox->currentText().toInt());
         w->show();
+        this->close();
     }
     else
     {

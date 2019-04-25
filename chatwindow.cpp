@@ -1,6 +1,7 @@
 #include "chatwindow.h"
 #include "ui_chatwindow.h"
 #include "global.h"
+#include "messagewidget.h"
 
 #include <QPainter>
 #include <QPushButton>
@@ -8,6 +9,7 @@
 #include <QResizeEvent>
 #include <QMessageBox>
 #include <tchar.h>
+#include <QRegExp>
 
 
 using namespace cv;
@@ -21,7 +23,8 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, QWidget *parent) :
     m_VideoWindow(nullptr),
     m_VideoWindowLayout(nullptr),
     m_AudioPlayer(nullptr),
-    m_IsUdpChatNow(false)
+    m_IsUdpChatNow(false),
+    m_EmotionWidgetShow(false)
 {
     ui->setupUi(this);
     this->setWindowFlags(Qt::X11BypassWindowManagerHint | Qt::FramelessWindowHint);
@@ -40,12 +43,24 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, QWidget *parent) :
     m_TitleBar->setTitleContent("我的好友", 15);
 
 
+    m_EmotionWidget = new QWidget();
+    m_EmotionWidget->resize(200, 200);
+    m_EmotionWidget->hide();
+    m_EmotionWidget->setWindowFlags(Qt::FramelessWindowHint);
+    m_EmotionWidget->installEventFilter(this);
+
+
+    ui->MsgEdit->installEventFilter(this);
+    ui->MsgEdit->setFont(QFont(tr("Consolas"), 14));
 
 
     connect(m_TitleBar, SIGNAL(signalButtonCloseClicked()), this, SLOT(close()));
     connect(ui->CloseButton, SIGNAL(clicked(bool)), this, SLOT(close()));
     connect(ui->VideoButton, SIGNAL(clicked(bool)), this, SLOT(ReqVideoChat()));
     connect(&m_ShowVideoTimer, SIGNAL(timeout()), this, SLOT(ShowVideoInfo()));
+    connect(ui->SendButton, SIGNAL(clicked(bool)), this, SLOT(SendChatWordMessage()));
+    connect(ui->EmoticonButton, SIGNAL(clicked(bool)), this, SLOT(ShowEmotionWidget()));
+    connect(ui->WordButton, SIGNAL(clicked(bool)), this, SLOT(ChangeWordStyle()));
 
     Inithandle();
 }
@@ -54,6 +69,7 @@ ChatWindow::~ChatWindow()
 {
     delete ui;
     if(m_DelHandle)m_DelHandle(m_FriendId);
+    delete m_EmotionWidget;
 }
 
 //init
@@ -61,6 +77,7 @@ void ChatWindow::Inithandle()
 {
     m_HandleMap.insert(MESSAGETYPE(REQUDPEVENTGROUP, REQUDPCHATACTION), std::bind(&ChatWindow::ReqUdpChatMsgHandle, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE), std::bind(&ChatWindow::ReqUdpChatMsgHandle, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(REQUDPEVENTGROUP, RESCLOSEUDPCHATCODE), std::bind(&ChatWindow::ReqUdpChatMsgHandle, this, std::placeholders::_1));
 }
 
 // 虚函数
@@ -88,7 +105,31 @@ void ChatWindow::paintEvent(QPaintEvent *event)
 
 void ChatWindow::resizeEvent(QResizeEvent *event)
 {
+
     QWidget::resizeEvent(event);
+}
+
+bool ChatWindow::eventFilter(QObject *target, QEvent *event)
+{
+    if(target == ui->MsgEdit)
+    {
+        if(event->type() == QEvent::KeyPress)//回车键
+        {
+             QKeyEvent *k = static_cast<QKeyEvent *>(event);
+             if(k->key() == Qt::Key_Return)
+             {
+                 SendChatWordMessage();
+                 return true;
+             }
+        }
+    }
+    return QWidget::eventFilter(target,event);
+}
+
+void ChatWindow::moveEvent(QMoveEvent *event)
+{
+    m_EmotionWidget->move(ui->MainBoard->mapToGlobal(QPoint(ui->WordButton->x(), ui->WordButton->y() - m_EmotionWidget->height())));
+    QWidget::moveEvent(event);
 }
 
 //public fun
@@ -199,6 +240,49 @@ void ChatWindow::CloseVideoWindow()
     SendtoRemote(s, m);
 }
 
+void ChatWindow::SendChatWordMessage()
+{
+    QRegExp rx("<p.*>(.*)</p>");
+    int pos(0);
+    QStringList slist;
+    while((pos = rx.indexIn(ui->MsgEdit->toHtml(), pos)) != -1) {
+        slist.push_back(rx.capturedTexts().at(1));
+        pos += rx.matchedLength();
+    }
+    qDebug() << slist;
+    mw = new MessageWidget;
+    mw->SetText(slist[0]);
+    ui->MsgEdit->clear();
+}
+
+void ChatWindow::ShowEmotionWidget()
+{
+    qDebug() << "in ShowEmotionWidget";
+    qDebug() << "mw width " << mw->width();
+    mw->SetWidth(mw->width() - 10);
+//    if(!m_EmotionWidgetShow)
+//    {
+//        QPoint point = ui->MainBoard->mapToGlobal(QPoint(ui->WordButton->x(), ui->WordButton->y() - m_EmotionWidget->height()));
+//        qDebug() << point;
+//        m_EmotionWidget->move(point);
+//        m_EmotionWidget->show();
+//        m_EmotionWidget->raise();
+//        m_EmotionWidgetShow = true;
+//    }
+//    else
+//    {
+//        m_EmotionWidget->hide();
+//        m_EmotionWidgetShow = false;
+//    }
+    qDebug() << "end ShowEmotionWidget";
+}
+
+void ChatWindow::ChangeWordStyle()
+{
+    qDebug() << "mw width " << mw->width();
+    mw->SetWidth(mw->width() + 10);
+}
+
 
 
 //消息处理函数
@@ -211,7 +295,7 @@ void ChatWindow::ReqUdpChatMsgHandle(MessagePtr m)
         SendtoRemote(s, m);
 
     }
-    else if(m->Type() == MESSAGETYPE(RESUDPREQGROUP, RESCLOSEUDPCHATCODE))
+    else if(m->Type() == MESSAGETYPE(REQUDPEVENTGROUP, RESCLOSEUDPCHATCODE))
     {
         RemoveVideoChat();
     }
@@ -237,12 +321,6 @@ void ChatWindow::ShowVideoInfo()
             {
                     Mat frame;
                     frame = imdecode(Mat(Packet->data), IMREAD_COLOR);
-                    frame = imdecode(Mat(Packet->data), IMREAD_COLOR);
-                    frame = imdecode(Mat(Packet->data), IMREAD_COLOR);
-                    frame = imdecode(Mat(Packet->data), IMREAD_COLOR);
-                    MatToQImage(frame);
-                    MatToQImage(frame);
-                    MatToQImage(frame);
                     m_VideoWindow->SetVideoPic(QPixmap::fromImage(MatToQImage(frame)));
 
             }

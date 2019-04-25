@@ -13,6 +13,7 @@
 #include "message.h"
 #include "titlebar.h"
 #include "audioplayer.h"
+#include "messagewidget.h"
 
 namespace Ui {
 class ChatWindow;
@@ -33,6 +34,7 @@ public:
 private:
     Ui::ChatWindow *ui;
     TitleBar *m_TitleBar;
+    QWidget *m_EmotionWidget;
     uint32_t m_FriendId;
     uint32_t m_MeId;
     std::function<void(uint32_t)> m_DelHandle;
@@ -41,8 +43,10 @@ private:
     std::atomic_bool m_IsUdpChatNow;
     QTimer m_ShowVideoTimer;
     AudioPlayer *m_AudioPlayer;
+    bool m_EmotionWidgetShow;
 
     QHash<uint32_t, std::function<void(MessagePtr)>> m_HandleMap;
+    MessageWidget *mw;
 
 private:
     void Inithandle();
@@ -53,11 +57,16 @@ private:
 protected:
     void paintEvent(QPaintEvent *event);
     void resizeEvent(QResizeEvent *event);
+    bool eventFilter(QObject *target, QEvent *event);
+    void moveEvent(QMoveEvent *event);
 
 private slots:
     void ReqVideoChat();
     void CloseVideoWindow();
     void ShowVideoInfo();
+    void SendChatWordMessage();
+    void ShowEmotionWidget();
+    void ChangeWordStyle();
 
 signals:
     void ChatWindowUdpChatEnd(uint32_t);

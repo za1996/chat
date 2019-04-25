@@ -39,7 +39,9 @@ SOURCES += \
     chatwindow.cpp \
     videowindow.cpp \
     udprecvicer.cpp \
-    audioplayer.cpp
+    audioplayer.cpp \
+    chatwindowmessageitem.cpp \
+    messagewidget.cpp
 
 HEADERS += \
         loginwindow.h \
@@ -57,13 +59,16 @@ HEADERS += \
     videowindow.h \
     udprecvicer.h \
     concurrentqueue.h \
-    audioplayer.h
+    audioplayer.h \
+    chatwindowmessageitem.h \
+    messagewidget.h
 
 FORMS += \
         loginwindow.ui \
     personalinfo.ui \
     chatwindow.ui \
-    videowindow.ui
+    videowindow.ui \
+    chatwindowmessageitem.ui
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../openCV/opencv/build/x64/vc15/lib/ -lopencv_world401
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../openCV/opencv/build/x64/vc15/lib/ -lopencv_world401d

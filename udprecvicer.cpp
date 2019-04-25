@@ -102,6 +102,7 @@ void UdpRecvicer::SendAddr()
 
 void UdpRecvicer::UdpVideoSend()
 {
+    qDebug() << __FUNCTION__;
     if(m_StartSendData)
     {
 //        qDebug() << __FUNCTION__;
@@ -142,6 +143,7 @@ void UdpRecvicer::UdpVideoSend()
 
 void UdpRecvicer::UdpAudioSend()
 {
+    qDebug() << __FUNCTION__;
     if(m_StartSendData)
     {
         if(m_FriendId == 1001)

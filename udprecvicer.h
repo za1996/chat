@@ -10,6 +10,11 @@
 #include <QLabel>
 #include "message.h"
 #include "global.h"
+extern "C"
+{
+#include <al.h>
+#include <alc.h>
+}
 
 class UdpRecvicer : public QThread
 {
@@ -17,26 +22,35 @@ class UdpRecvicer : public QThread
 public:
 
     UdpRecvicer();
+    ~UdpRecvicer();
 
     void run();
 
     void SetMeId(uint32_t Id) { m_MeId = Id; }
     void SetFriendId(uint32_t Id) {m_FriendId = Id; }
+    void SetPort(int port) { m_Port = port; }
+    void ReadyStart() {m_StartSendData = true;}
 
 private:
 //    void UdpSendToRemote(uint32_t FriendId, int PacketNum, const char *data, int size);
     uint32_t m_MeId;
     uint32_t m_FriendId;
+    int m_Port;
     QUdpSocket m_UdpSocket;
-    QTimer *m_UdpTimer;
+    QTimer *m_UdpVideoDataTimer;
+    QTimer *m_UdpSendAddrTimer;
+    QTimer *m_UdpAudioDataTimer;
     cv::VideoCapture *cam;
-    QLabel m_VideoLabel;
+    ALCdevice* micDevice;
+    bool m_StartSendData;
 
-    void UdpSendToRemote(uint32_t FriendId, int PacketNum, const char *data, int size);
+    void UdpSendToRemote(uint32_t FriendId, int PacketNum, const char *data, int size, bool isAudio = false);
 
 private slots:
-    void UdpSend();
+    void UdpVideoSend();
+    void UdpAudioSend();
     void UdpRecv();
+    void SendAddr();
 };
 
 #endif // UDPRECVICER_H

@@ -20,3 +20,8 @@ void VideoWindow::OnClosePress()
 {
     emit VideoWindowCloseButtonClick();
 }
+
+void VideoWindow::SetVideoPic(const QPixmap &pixmap)
+{
+    ui->Video->setPixmap(pixmap.scaled(ui->Video->width(), ui->Video->height()));
+}

@@ -9,6 +9,9 @@
 #include <QMessageBox>
 #include <tchar.h>
 
+
+using namespace cv;
+
 ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::ChatWindow),
@@ -17,6 +20,7 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, QWidget *parent) :
     m_DelHandle(nullptr),
     m_VideoWindow(nullptr),
     m_VideoWindowLayout(nullptr),
+    m_AudioPlayer(nullptr),
     m_IsUdpChatNow(false)
 {
     ui->setupUi(this);
@@ -41,6 +45,7 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, QWidget *parent) :
     connect(m_TitleBar, SIGNAL(signalButtonCloseClicked()), this, SLOT(close()));
     connect(ui->CloseButton, SIGNAL(clicked(bool)), this, SLOT(close()));
     connect(ui->VideoButton, SIGNAL(clicked(bool)), this, SLOT(ReqVideoChat()));
+    connect(&m_ShowVideoTimer, SIGNAL(timeout()), this, SLOT(ShowVideoInfo()));
 
     Inithandle();
 }
@@ -55,6 +60,7 @@ ChatWindow::~ChatWindow()
 void ChatWindow::Inithandle()
 {
     m_HandleMap.insert(MESSAGETYPE(REQUDPEVENTGROUP, REQUDPCHATACTION), std::bind(&ChatWindow::ReqUdpChatMsgHandle, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE), std::bind(&ChatWindow::ReqUdpChatMsgHandle, this, std::placeholders::_1));
 }
 
 // 虚函数
@@ -113,8 +119,59 @@ void ChatWindow::ReqVideoChat()
 
 }
 
+QImage ChatWindow::MatToQImage(cv::Mat &mtx)
+{
+//    switch (mtx.type())
+//    {
+//    case CV_8UC1:
+//        {
+//            qDebug() << "CV_8UC1";
+//            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols, QImage::Format_Grayscale8);
+//            return img;
+//        }
+//        break;
+//    case CV_8UC3:
+//        {
+//            qDebug() << "CV_8UC3";
+//            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols * 3, QImage::Format_RGB888);
+//            return img.rgbSwapped();
+//        }
+//        break;
+//    case CV_8UC4:
+//        {
+//            qDebug() << "CV_8UC4";
+//            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols * 4, QImage::Format_ARGB32);
+//            return img;
+//        }
+//        break;
+//    default:
+//        {
+//            qDebug() << "DEFAULT";
+//            QImage img;
+//            return img;
+//        }
+//        break;
+//    }
+    cv::Mat temp; // make the same cv::Mat
+    cvtColor(mtx, temp, COLOR_BGR2RGB); // cvtColor Makes a copt, that what i need
+    QImage dest((const uchar *) temp.data, temp.cols, temp.rows, temp.step, QImage::Format_RGB888);
+    dest.bits(); // enforce deep copy, see documentation
+    // of QImage::QImage ( const uchar * data, int width, int height, Format format )
+    return dest;
+}
 
-//slot
+void ChatWindow::RemoveVideoChat()
+{
+    m_IsUdpChatNow = false;
+    ui->MainLayout->removeItem(m_VideoWindowLayout);
+    m_ShowVideoTimer.stop();
+    this->resize(ui->MsgEdit->width(), this->height());
+    delete m_AudioPlayer;
+    emit ChatWindowUdpChatEnd(m_FriendId);
+}
+
+
+//public slot
 void ChatWindow::HandleMessage(uint32_t id, std::shared_ptr<Message> m)
 {
     qDebug() << __FUNCTION__ << " messageid : " << id << "chat id : " << m_FriendId;
@@ -132,14 +189,17 @@ void ChatWindow::HandleMessage(uint32_t id, std::shared_ptr<Message> m)
     }
 }
 
+
+
+//private slot
 void ChatWindow::CloseVideoWindow()
 {
-    m_IsUdpChatNow = false;
-    ui->MainLayout->removeItem(m_VideoWindowLayout);
-    this->resize(ui->MsgEdit->width(), this->height());
+    RemoveVideoChat();
     auto m = CreateReqUdpChatMsg(m_FriendId, m_MeId, REQCLOSEUDPCHATACTION, 0);
     SendtoRemote(s, m);
 }
+
+
 
 //消息处理函数
 void ChatWindow::ReqUdpChatMsgHandle(MessagePtr m)
@@ -153,10 +213,48 @@ void ChatWindow::ReqUdpChatMsgHandle(MessagePtr m)
     }
     else if(m->Type() == MESSAGETYPE(RESUDPREQGROUP, RESCLOSEUDPCHATCODE))
     {
+        RemoveVideoChat();
+    }
+    else if(m->Type() == MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE) && m_IsUdpChatNow)
+    {
+        m_ShowVideoTimer.start(100);
+        m_AudioPlayer = new AudioPlayer;
+        m_AudioPlayer->addUser(m_FriendId);
 
     }
-    else if(m->Type() == MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE))
-    {
+}
 
+void ChatWindow::ShowVideoInfo()
+{
+//    qDebug() << __FUNCTION__;
+    if(isUdpChatNow())
+    {
+        auto it = m_FriendVideoDataQueueMap.find(m_FriendId);
+        UdpPacketPtr Packet;
+        if(it != m_FriendVideoDataQueueMap.end())
+        {
+            if(it->second.try_dequeue(Packet))
+            {
+                    Mat frame;
+                    frame = imdecode(Mat(Packet->data), IMREAD_COLOR);
+                    frame = imdecode(Mat(Packet->data), IMREAD_COLOR);
+                    frame = imdecode(Mat(Packet->data), IMREAD_COLOR);
+                    frame = imdecode(Mat(Packet->data), IMREAD_COLOR);
+                    MatToQImage(frame);
+                    MatToQImage(frame);
+                    MatToQImage(frame);
+                    m_VideoWindow->SetVideoPic(QPixmap::fromImage(MatToQImage(frame)));
+
+            }
+        }
+        it = m_FriendAudioDataQueueMap.find(m_FriendId);
+        if(it != m_FriendAudioDataQueueMap.end())
+        {
+            if(it->second.try_dequeue(Packet))
+            {
+                m_AudioPlayer->setCurrentUser(m_FriendId);
+                m_AudioPlayer->play(Packet->data.data(), Packet->totalSize, AUDIO_FREQ, AL_FORMAT_MONO8);
+            }
+        }
     }
 }

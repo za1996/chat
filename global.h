@@ -19,11 +19,18 @@ MessagePtr CreateChangeFriendsGroupMsg(uint32_t GroupId, const std::vector<uint3
 MessagePtr CreateReqUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag);
 MessagePtr CreateUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag, const char *data, uint16_t totalSize, uint16_t packetStart, uint16_t packetSize, uint32_t packetNum, uint64_t time);
 MessagePtr CreateUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag, const std::string &str);
+typedef std::shared_ptr<UdpPacket> UdpPacketPtr;
+typedef UdpPacketPtr VideoPacketPtr;
+typedef UdpPacketPtr AudioPacketPtr;
 extern QTcpSocket s;
-extern QHash<uint32_t, std::map<uint64_t, UdpPacket*>> m_FriendUdpPacketMap;
-extern std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacket*>> m_FriendDataQueueMap;
-#define UDP_MAX_SIZE 14336
+extern QHash<uint32_t, std::map<uint64_t, VideoPacketPtr>> m_FriendVideoUdpPacketMap;
+extern QHash<uint32_t, std::map<uint64_t, AudioPacketPtr>> m_FriendAudioUdpPacketMap;
+extern std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendVideoDataQueueMap;
+extern std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendAudioDataQueueMap;
+//#define UDP_MAX_SIZE 14336
+#define UDP_MAX_SIZE 1436
 #define UDP_MAX_DELAY 200
 #define TIMEMAGICNUMER 60000
+#define AUDIO_FREQ 8000
 
 #endif // GLOBAL_H

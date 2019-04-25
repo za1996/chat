@@ -6,7 +6,6 @@
 #include "chatwindow.h"
 #include <nlohmann/json.hpp>
 #include "groupiteminfo.h"
-#include "udprecvicer.h"
 #include <functional>
 #include <iostream>
 
@@ -32,6 +31,7 @@
 
 using nlohmann::json;
 using namespace cv;
+using moodycamel::ConcurrentQueue;
 
 MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     QWidget(parent)
@@ -112,8 +112,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 
     m_UserDesc->setText("UserDesc");
 
-    m_FriendUdpPacketMap.insert(m_UserId, std::map<uint64_t, UdpPacket*>());
-    m_FriendDataQueueMap.insert(std::pair<uint32_t, moodycamel::ConcurrentQueue<UdpPacket*>>(m_UserId, moodycamel::ConcurrentQueue<UdpPacket*>()));
+
 //    m_UdpSocket.setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 1024 * 1024 * 4);
 
     UpdatePos();
@@ -122,7 +121,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     connect(m_GroupTree, SIGNAL(itemClicked(QTreeWidgetItem*,int)), this, SLOT(onGroupItemClick(QTreeWidgetItem*,int)));
     connect(m_GroupTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)), this, SLOT(onGroupItemDoubleClick(QTreeWidgetItem*,int)));
     connect(m_addGroup, SIGNAL(triggered(bool)), this, SLOT(AddUserGroup()));
-    connect(&m_ShowVideoTimer, SIGNAL(timeout()), this, SLOT(ShowVideo()));
+//    connect(&m_ShowVideoTimer, SIGNAL(timeout()), this, SLOT(ShowVideo()));
 
 
 //    connect(&m_UdpTimer, SIGNAL(timeout()), this, SLOT(UdpSend()));
@@ -379,7 +378,7 @@ void MainWindow::ChangeFriendsGroup(MessagePtr m)
     }
 }
 
-void MainWindow::ReadyReadUdpData(MessagePtr m)
+void MainWindow::AddUdpAddr(MessagePtr m)
 {
     QDebug q = qDebug();
     q << __FUNCTION__;
@@ -392,14 +391,39 @@ void MainWindow::ReadyReadUdpData(MessagePtr m)
     {
         q << "in Timer start ";
         q << m_UdpChatList.size();
-        if(!m_UdpChatList.size())
-//            m_UdpTimer.start(35);
+        if(!m_UdpChatList.size() && !m_UdpRecvicer)
+        {
+            q << "recv start";
+            m_FriendVideoUdpPacketMap.insert(FriendId, std::map<uint64_t, UdpPacketPtr>());
+            m_FriendVideoDataQueueMap.insert(std::pair<uint32_t, ConcurrentQueue<UdpPacketPtr>>(FriendId, ConcurrentQueue<UdpPacketPtr>()));
+            m_FriendAudioUdpPacketMap.insert(FriendId, std::map<uint64_t, UdpPacketPtr>());
+            m_FriendAudioDataQueueMap.insert(std::pair<uint32_t, ConcurrentQueue<UdpPacketPtr>>(FriendId, ConcurrentQueue<UdpPacketPtr>()));
+//            UdpRecvicer *recvicer = new UdpRecvicer;
+            m_UdpRecvicer = new UdpRecvicer;
+            m_UdpRecvicer->SetMeId(m_UserId);
+            m_UdpRecvicer->SetFriendId(FriendId);
+            m_UdpRecvicer->SetPort(m_UdpPort);
+            m_UdpRecvicer->start(QThread::HighPriority);
+        }
 
 
         if((*it)->isUdpChatNow())
             m_UdpChatList.push_back(FriendId);
+
+//        emit HasMessage(FriendId, m);
     }
-    emit HasMessage(FriendId, m);
+}
+
+void MainWindow::ReadyReadUdpData(MessagePtr m)
+{
+    qDebug() << __FUNCTION__;
+    json info = json::parse((char *)m->data());
+    uint32_t FriendId = info["FriendId"].get<json::number_unsigned_t>();
+    if(m_UdpRecvicer)
+    {
+        m_UdpRecvicer->ReadyStart();
+        emit HasMessage(FriendId, m);
+    }
 }
 
 //private
@@ -414,6 +438,7 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESDELFRIENDSCODE), std::bind(&MainWindow::DeleteFriends, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESCHANGEFRIENDSGROUPCODE), std::bind(&MainWindow::ChangeFriendsGroup, this, std::placeholders::_1));
 
+    m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESSENDUDPENDPOINTCODE), std::bind(&MainWindow::AddUdpAddr, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE), std::bind(&MainWindow::ReadyReadUdpData, this, std::placeholders::_1));
 }
 
@@ -431,39 +456,45 @@ void MainWindow::UpdatePos()
     m_GroupTree->move(0, m_SerachLineEdit->pos().y() + m_SerachLineEdit->height());
 }
 
-QImage MainWindow::MatToQImage(cv::Mat mtx)
+QImage MainWindow::MatToQImage(cv::Mat &mtx)
 {
-    switch (mtx.type())
-    {
-    case CV_8UC1:
-        {
-            qDebug() << "CV_8UC1";
-            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols, QImage::Format_Grayscale8);
-            return img;
-        }
-        break;
-    case CV_8UC3:
-        {
-            qDebug() << "CV_8UC3";
-            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols * 3, QImage::Format_RGB888);
-            return img.rgbSwapped();
-        }
-        break;
-    case CV_8UC4:
-        {
-            qDebug() << "CV_8UC4";
-            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols * 4, QImage::Format_ARGB32);
-            return img;
-        }
-        break;
-    default:
-        {
-            qDebug() << "DEFAULT";
-            QImage img;
-            return img;
-        }
-        break;
-    }
+//    switch (mtx.type())
+//    {
+//    case CV_8UC1:
+//        {
+//            qDebug() << "CV_8UC1";
+//            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols, QImage::Format_Grayscale8);
+//            return img;
+//        }
+//        break;
+//    case CV_8UC3:
+//        {
+//            qDebug() << "CV_8UC3";
+//            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols * 3, QImage::Format_RGB888);
+//            return img.rgbSwapped();
+//        }
+//        break;
+//    case CV_8UC4:
+//        {
+//            qDebug() << "CV_8UC4";
+//            QImage img((const unsigned char *)(mtx.data), mtx.cols, mtx.rows, mtx.cols * 4, QImage::Format_ARGB32);
+//            return img;
+//        }
+//        break;
+//    default:
+//        {
+//            qDebug() << "DEFAULT";
+//            QImage img;
+//            return img;
+//        }
+//        break;
+//    }
+    cv::Mat temp; // make the same cv::Mat
+    cvtColor(mtx, temp, COLOR_BGR2RGB); // cvtColor Makes a copt, that what i need
+    QImage dest((const uchar *) temp.data, temp.cols, temp.rows, temp.step, QImage::Format_RGB888);
+    dest.bits(); // enforce deep copy, see documentation
+    // of QImage::QImage ( const uchar * data, int width, int height, Format format )
+    return dest;
 }
 
 void MainWindow::DelGroupItem(uint32_t Id, bool clear)
@@ -556,6 +587,8 @@ void MainWindow::CreateChatWindow(uint32_t FriendId)
     {
         ChatWindow *w = new ChatWindow(m_UserId, FriendId);
         connect(this, SIGNAL(HasMessage(uint32_t,std::shared_ptr<Message>)), w, SLOT(HandleMessage(uint32_t,std::shared_ptr<Message>)));
+        connect(this, SIGNAL(ChatWindowReadyReadUdp(uint32_t)), w, SLOT(StartReadyShowVideo(uint32_t)));
+        connect(w, SIGNAL(ChatWindowUdpChatEnd(uint32_t)), this, SLOT(RemoveUdpChatFriend(uint32_t)));
         m_FriendsChatMap.insert(FriendId, w);
         w->SetDelHandle(std::bind(&MainWindow::DelChatWindow, this, std::placeholders::_1));
         w->show();
@@ -739,17 +772,8 @@ void MainWindow::onGroupItemDoubleClick(QTreeWidgetItem *pitem, int col)
         // open the chat
         // write code
 
-//        CreateChatWindow(pitem->data(0, Qt::UserRole).value<uint32_t>());
+        CreateChatWindow(pitem->data(0, Qt::UserRole).value<uint32_t>());
     }
-    UdpRecvicer *recvicer = new UdpRecvicer();
-    recvicer->SetMeId(m_UserId);
-    recvicer->SetFriendId(0);
-    m_VideoLabel.move(20, 20);
-    m_VideoLabel.resize(320, 240);
-    m_VideoLabel.show();
-    recvicer->start(QThread::HighPriority);
-    m_ShowVideoTimer.start(150);
-//    m_UdpTimer.start(60);
 }
 
 void MainWindow::DelGroupItem(void *item)
@@ -819,19 +843,24 @@ void MainWindow::ShowGroupItemInfo(void *item)
 
 }
 
-void MainWindow::ShowVideo()
-{
-    auto it = m_FriendDataQueueMap.find(m_UserId);
-    UdpPacket* Packet;
-    if(it != m_FriendDataQueueMap.end())
-    {
-        if(it->second.try_dequeue(Packet))
-        {
-                Mat frame;
-                frame = imdecode(Mat(Packet->data), IMREAD_COLOR);
-                m_VideoLabel.setPixmap(QPixmap::fromImage(MatToQImage(frame)).scaled(m_VideoLabel.width(), m_VideoLabel.height()));
 
+void MainWindow::RemoveUdpChatFriend(uint32_t id)
+{
+    m_UdpChatList.remove(id);
+    if(!m_UdpChatList.size())
+    {
+        m_FriendVideoUdpPacketMap.clear();
+        m_FriendVideoDataQueueMap.clear();
+        m_FriendAudioUdpPacketMap.clear();
+        m_FriendAudioDataQueueMap.clear();
+        if(m_UdpRecvicer)
+        {
+            m_UdpRecvicer->terminate();
+            m_UdpRecvicer->wait();
         }
+        qDebug() << "m_UdpRecvicer thread stop";
+        delete m_UdpRecvicer;
+        m_UdpRecvicer = nullptr;
     }
 }
 

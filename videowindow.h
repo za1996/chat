@@ -14,6 +14,7 @@ class VideoWindow : public QWidget
 public:
     explicit VideoWindow(QWidget *parent = 0);
     ~VideoWindow();
+    void SetVideoPic(const QPixmap &pixmap);
 
 private:
     Ui::VideoWindow *ui;

@@ -6,9 +6,13 @@
 #include <functional>
 #include <QHBoxLayout>
 #include <atomic>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/dnn.hpp>
 #include "videowindow.h"
 #include "message.h"
 #include "titlebar.h"
+#include "audioplayer.h"
 
 namespace Ui {
 class ChatWindow;
@@ -35,12 +39,16 @@ private:
     VideoWindow *m_VideoWindow;
     QHBoxLayout *m_VideoWindowLayout;
     std::atomic_bool m_IsUdpChatNow;
+    QTimer m_ShowVideoTimer;
+    AudioPlayer *m_AudioPlayer;
 
     QHash<uint32_t, std::function<void(MessagePtr)>> m_HandleMap;
 
 private:
     void Inithandle();
     void ReqUdpChatMsgHandle(MessagePtr);
+    void RemoveVideoChat();
+    QImage MatToQImage(cv::Mat &mtx);
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -49,6 +57,11 @@ protected:
 private slots:
     void ReqVideoChat();
     void CloseVideoWindow();
+    void ShowVideoInfo();
+
+signals:
+    void ChatWindowUdpChatEnd(uint32_t);
+
 
 
 public slots:

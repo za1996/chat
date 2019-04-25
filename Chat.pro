@@ -38,7 +38,8 @@ SOURCES += \
     global.cpp \
     chatwindow.cpp \
     videowindow.cpp \
-    udprecvicer.cpp
+    udprecvicer.cpp \
+    audioplayer.cpp
 
 HEADERS += \
         loginwindow.h \
@@ -55,7 +56,8 @@ HEADERS += \
     chatwindow.h \
     videowindow.h \
     udprecvicer.h \
-    concurrentqueue.h
+    concurrentqueue.h \
+    audioplayer.h
 
 FORMS += \
         loginwindow.ui \
@@ -68,3 +70,8 @@ else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../openCV/opencv/bui
 
 INCLUDEPATH += $$PWD/../../openCV/opencv/build/include
 DEPENDPATH += $$PWD/../../openCV/opencv/build/include
+
+win32: LIBS += -L'C:/Program Files (x86)/OpenAL 1.1 SDK/libs/Win64/' -lOpenAL32
+
+INCLUDEPATH += 'C:/Program Files (x86)/OpenAL 1.1 SDK/include'
+DEPENDPATH += 'C:/Program Files (x86)/OpenAL 1.1 SDK/include'

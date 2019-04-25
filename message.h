@@ -13,9 +13,11 @@ struct UdpPacket
     uint32_t packetNum;
     uint64_t time;
     uint16_t size;
-    uint16_t totalSize;
+    int totalSize;
     uint32_t bitlist;
     std::vector<uchar> data;
+
+    UdpPacket() : packetNum(0), time(0), size(0), totalSize(0), bitlist(0) {}
 };
 
 

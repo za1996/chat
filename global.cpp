@@ -1,5 +1,6 @@
 #include "message.h"
 #include "concurrentqueue.h"
+#include "global.h"
 
 #include <list>
 #include <vector>
@@ -8,9 +9,12 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
+
 QTcpSocket s;
-QHash<uint32_t, std::map<uint64_t, UdpPacket*>> m_FriendUdpPacketMap;
-std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacket*>> m_FriendDataQueueMap;
+QHash<uint32_t, std::map<uint64_t, VideoPacketPtr>> m_FriendVideoUdpPacketMap;
+QHash<uint32_t, std::map<uint64_t, AudioPacketPtr>> m_FriendAudioUdpPacketMap;
+std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendVideoDataQueueMap;
+std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendAudioDataQueueMap;
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist)
 {

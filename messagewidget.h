@@ -4,18 +4,21 @@
 #include <QTextEdit>
 #include <QTimer>
 
-class MessageWidget : protected QTextEdit
+class MessageWidget : public QTextEdit
 {
     Q_OBJECT
 public:
-    MessageWidget();
+    MessageWidget(QWidget *parent = nullptr);
     void SetText(const QString &text);
 
     void SetWidth(int width);
 
-    using QTextEdit::width;
-    using QTextEdit::height;
-    using QTextEdit::size;
+//    using QTextEdit::width;
+//    using QTextEdit::height;
+//    using QTextEdit::size;
+//    using QTextEdit::move;
+//    using QTextEdit::hide;
+//    using QTextEdit::show;
 
 
 protected:
@@ -30,10 +33,10 @@ private:
 
 
 private slots:
-    void areaChanged();
+    void areaChanged(int width);
 
 signals:
-    void sizeChange();
+    void sizeChange(int width);
 };
 
 #endif // MESSAGEWIDGET_H

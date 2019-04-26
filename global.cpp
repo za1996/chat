@@ -155,4 +155,14 @@ MessagePtr CreateUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, 
     return m;
 }
 
+MessagePtr CreateChatWordMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag, const std::string &str, uint64_t time)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["Msg"] = str;
+    info["time"] = time;
+    m->setHead(srcID, FriendId, TRANSFERDATAGROUP, action, flag);
+    m->setData(info.dump());
+    return m;
+}
 

@@ -46,10 +46,13 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     m_MainBoard = new QWidget(this);
     m_TitleBar = new TitleBar(this);
     m_GroupTree = new QTreeWidget(m_MainBoard);
+    m_UsersGroupList = new QListWidget(m_MainBoard);
     m_Profile = new QLabel(m_MainBoard);
     m_UserName = new QLabel(m_MainBoard);
     m_UserDesc = new QLabel(m_MainBoard);
     m_SerachLineEdit = new QLineEdit(m_MainBoard);
+    m_ShowFriendsGroupTreeButton = new QPushButton(m_MainBoard);
+    m_ShowUsersGroupListButton = new QPushButton(m_MainBoard);
     m_GroupMap = new QHash<QString, QTreeWidgetItem *>();
     m_GroupIdMap = new QHash<uint32_t, GroupItemInfoPtr>();
     m_FriendsMap = new QHash<uint32_t, GroupItemInfoPtr>();
@@ -89,6 +92,16 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     m_GroupTree->addAction(m_addGroup);
     m_GroupTree->setContextMenuPolicy(Qt::ActionsContextMenu);
 
+    m_UsersGroupList->setStyleSheet("QListWidget{border-style:none;   }QListWidget::item{background-color:rgba(255,255,255,0%);}");
+    m_UsersGroupList->verticalScrollBar()->setStyleSheet(file.readAll());
+    m_UsersGroupList->setVerticalScrollMode(QListWidget::ScrollPerPixel);
+    m_UsersGroupList->verticalScrollBar()->setSingleStep(10);
+    m_UsersGroupList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_UsersGroupList->hide();
+
+
+    m_ShowFriendsGroupTreeButton->setText("好友");
+    m_ShowUsersGroupListButton->setText("群组");
 
 
     m_SerachLineEdit->resize(m_MainBoard->width(), 30);
@@ -126,6 +139,8 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 
 //    connect(&m_UdpTimer, SIGNAL(timeout()), this, SLOT(UdpSend()));
 //    connect(&m_UdpSocket, SIGNAL(readyRead()), this, SLOT(UdpRead()));
+    connect(m_ShowFriendsGroupTreeButton, SIGNAL(clicked(bool)), this, SLOT(ShowFriendsGroupTree()));
+    connect(m_ShowUsersGroupListButton, SIGNAL(clicked(bool)), this, SLOT(ShowUserGroupList()));
 
     qDebug() << "TitleBar Height" << m_TitleBar->height() << endl;
 
@@ -378,6 +393,7 @@ void MainWindow::ChangeFriendsGroup(MessagePtr m)
     }
 }
 
+//开启udp发送和接收线程 开始先缓慢发包让服务器记住地址
 void MainWindow::AddUdpAddr(MessagePtr m)
 {
     QDebug q = qDebug();
@@ -426,6 +442,11 @@ void MainWindow::ReadyReadUdpData(MessagePtr m)
     }
 }
 
+void MainWindow::RecvChatData(MessagePtr m)
+{
+
+}
+
 //private
 
 void MainWindow::InitHandle()
@@ -440,6 +461,8 @@ void MainWindow::InitHandle()
 
     m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESSENDUDPENDPOINTCODE), std::bind(&MainWindow::AddUdpAddr, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE), std::bind(&MainWindow::ReadyReadUdpData, this, std::placeholders::_1));
+
+    m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERCHATDATAACTION), std::bind(&MainWindow::RecvChatData, this, std::placeholders::_1));
 }
 
 
@@ -454,6 +477,17 @@ void MainWindow::UpdatePos()
     m_UserDesc->move(m_UserName->pos().x(), m_UserName->pos().y() + m_UserName->height() + SPACESIZE);
     m_SerachLineEdit->move(0, m_Profile->pos().y() + m_Profile->height() + SPACESIZE);
     m_GroupTree->move(0, m_SerachLineEdit->pos().y() + m_SerachLineEdit->height());
+
+    m_UsersGroupList->move(m_GroupTree->pos());
+    m_UsersGroupList->resize(m_GroupTree->size());
+
+    m_ShowFriendsGroupTreeButton->move(m_GroupTree->x(), m_GroupTree->y() + m_GroupTree->height());
+    m_ShowFriendsGroupTreeButton->resize(m_MainBoard->width() * 0.5, 20);
+
+    m_ShowUsersGroupListButton->move(m_ShowFriendsGroupTreeButton->x() + m_ShowFriendsGroupTreeButton->width(), m_ShowFriendsGroupTreeButton->y());
+    m_ShowUsersGroupListButton->resize(m_ShowFriendsGroupTreeButton->size());
+    m_ShowFriendsGroupTreeButton->show();
+    m_ShowUsersGroupListButton->show();
 }
 
 QImage MainWindow::MatToQImage(cv::Mat &mtx)
@@ -862,6 +896,18 @@ void MainWindow::RemoveUdpChatFriend(uint32_t id)
         delete m_UdpRecvicer;
         m_UdpRecvicer = nullptr;
     }
+}
+
+void MainWindow::ShowFriendsGroupTree()
+{
+    m_GroupTree->show();
+    m_GroupTree->raise();
+}
+
+void MainWindow::ShowUserGroupList()
+{
+    m_UsersGroupList->show();
+    m_UsersGroupList->raise();
 }
 
 //void MainWindow::UdpSend()

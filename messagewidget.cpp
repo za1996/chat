@@ -1,11 +1,11 @@
 #include "messagewidget.h"
 #include <QDebug>
 
-MessageWidget::MessageWidget() :
-    QTextEdit(nullptr),
+MessageWidget::MessageWidget(QWidget *parent) :
+    QTextEdit(parent),
     m_oldWidth(0)
 {
-    connect(this, SIGNAL(sizeChange()), this, SLOT(areaChanged()));
+    connect(this, SIGNAL(sizeChange(int)), this, SLOT(areaChanged(int)));
 //    connect(&m_timer, SIGNAL(timeout()), this, SLOT(areaChanged()));
     this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -16,8 +16,40 @@ MessageWidget::MessageWidget() :
 }
 
 
-void MessageWidget::areaChanged()
+void MessageWidget::areaChanged(int width)
 {
+    qDebug() << __FUNCTION__;
+    this->setMaximumWidth(width);
+    if(true)
+    {
+        this->moveCursor(QTextCursor::Start, QTextCursor::MoveAnchor);
+        QRect start = this->cursorRect();
+        this->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+        QRect end = this->cursorRect();
+        qDebug("Cursor Start Pos : %d %d %d %d\n", start.x(), start.y(), start.width(), start.height());
+        qDebug("Cursor End Pos : %d %d %d %d\n", end.x(), end.y(), end.width(), end.height());
+        if(!onOneLine(start, end))
+        {
+            this->setMinimumWidth(width);
+            this->moveCursor(QTextCursor::Start, QTextCursor::MoveAnchor);
+            start = this->cursorRect();
+            this->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+            end = this->cursorRect();
+            qDebug("New Cursor Start Pos : %d %d %d %d\n", start.x(), start.y(), start.width(), start.height());
+            qDebug("New Cursor End Pos : %d %d %d %d\n", end.x(), end.y(), end.width(), end.height());
+            int len = end.x() - start.x();
+            if(onOneLine(start, end) && len < width - 10)
+            {
+                this->setMinimumWidth(len + 10);
+                this->setMaximumWidth(len + 10);
+            }
+        }
+    }
+    int realwidth = this->minimumWidth() ? this->minimumWidth() : document()->size().width() + 2;
+    this->resize(realwidth, document()->size().height());
+
+    this->setMinimumWidth(0);
+    qDebug() << "end";
     qDebug() << document()->size().width();
     qDebug() << document()->size().height();
     qDebug() << document()->size();
@@ -75,47 +107,16 @@ void MessageWidget::SetWidth(int width)
 //end:
 //        m_oldWidth = realwidth + 20;
 //    }
-    this->setMaximumWidth(width);
-    if(true)
-    {
-        this->moveCursor(QTextCursor::Start, QTextCursor::MoveAnchor);
-        QRect start = this->cursorRect();
-        this->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
-        QRect end = this->cursorRect();
-        qDebug("Cursor Start Pos : %d %d %d %d\n", start.x(), start.y(), start.width(), start.height());
-        qDebug("Cursor End Pos : %d %d %d %d\n", end.x(), end.y(), end.width(), end.height());
-        if(!onOneLine(start, end))
-        {
-            this->setMinimumWidth(width);
-            this->moveCursor(QTextCursor::Start, QTextCursor::MoveAnchor);
-            start = this->cursorRect();
-            this->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
-            end = this->cursorRect();
-            qDebug("New Cursor Start Pos : %d %d %d %d\n", start.x(), start.y(), start.width(), start.height());
-            qDebug("New Cursor End Pos : %d %d %d %d\n", end.x(), end.y(), end.width(), end.height());
-            int len = end.x() - start.x();
-            if(onOneLine(start, end) && len < width - 10)
-            {
-                this->setMinimumWidth(len + 10);
-                this->setMaximumWidth(len + 10);
-            }
-        }
-    }
-    int realwidth = this->minimumWidth() ? this->minimumWidth() : document()->size().width() + 2;
-    this->resize(realwidth, document()->size().height());
-
-    this->setMinimumWidth(0);
-    qDebug() << "end";
-    qDebug() << document()->size().width();
-    qDebug() << document()->size().height();
-    qDebug() << document()->size();
-    qDebug() << this->size();
+    emit sizeChange(width);
 }
 
 bool MessageWidget::onOneLine(const QRect &start, const QRect &end)
 {
+    int starty, endy;
+    starty = start.y() > 0 ? start.y() : 0;
+    endy = end.y() > 0 ? end.y() : 0;
     bool isOneLine = false;
-    if(start.y() == end.y() && end.y() - start.y() < start.height())
+    if(starty == endy && endy - starty < start.height())
         isOneLine = true;
     return isOneLine;
 }

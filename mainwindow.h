@@ -8,6 +8,7 @@
 #include <QPaintEvent>
 #include <QHash>
 #include <QUdpSocket>
+#include <QListWidget>
 #include <stdint.h>
 #include <list>
 #include <opencv2/highgui/highgui.hpp>
@@ -30,6 +31,7 @@ public:
 private:
     enum {SPACESIZE = 10, PROFILESIZE = 80};
     QTreeWidget *m_GroupTree;
+    QListWidget *m_UsersGroupList;
     TitleBar *m_TitleBar;
     QLabel *m_Profile;
     QLabel *m_UserName;
@@ -38,6 +40,8 @@ private:
     QLineEdit *m_SerachLineEdit;
     QWidget *m_MainBoard;
     QAction *m_addGroup;
+    QPushButton *m_ShowFriendsGroupTreeButton;
+    QPushButton *m_ShowUsersGroupListButton;
 
 
     QHash<QString, QTreeWidgetItem *> *m_GroupMap;
@@ -98,6 +102,7 @@ private:
     void ChangeFriendsGroup(MessagePtr);
     void ReadyReadUdpData(MessagePtr);
     void AddUdpAddr(MessagePtr);
+    void RecvChatData(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -125,6 +130,9 @@ private slots:
 //    void UdpSend();
 //    void UdpRead();
     void RemoveUdpChatFriend(uint32_t);
+
+    void ShowFriendsGroupTree();
+    void ShowUserGroupList();
 };
 
 #endif // MAINWINDOW_H

@@ -19,6 +19,7 @@ MessagePtr CreateChangeFriendsGroupMsg(uint32_t GroupId, const std::vector<uint3
 MessagePtr CreateReqUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag);
 MessagePtr CreateUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag, const char *data, uint16_t totalSize, uint16_t packetStart, uint16_t packetSize, uint32_t packetNum, uint64_t time);
 MessagePtr CreateUdpChatMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag, const std::string &str);
+MessagePtr CreateChatWordMsg(uint32_t FriendId, uint32_t srcID, uint32_t action, uint32_t flag, const std::string &str, uint64_t time);
 typedef std::shared_ptr<UdpPacket> UdpPacketPtr;
 typedef UdpPacketPtr VideoPacketPtr;
 typedef UdpPacketPtr AudioPacketPtr;

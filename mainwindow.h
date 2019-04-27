@@ -20,6 +20,8 @@
 #include "message.h"
 #include "chatwindow.h"
 #include "udprecvicer.h"
+#include "usersgroupitem.h"
+#include "concurrentqueue.h"
 
 class MainWindow : public QWidget
 {
@@ -40,6 +42,7 @@ private:
     QLineEdit *m_SerachLineEdit;
     QWidget *m_MainBoard;
     QAction *m_addGroup;
+    QAction *m_addUsersGroup;
     QPushButton *m_ShowFriendsGroupTreeButton;
     QPushButton *m_ShowUsersGroupListButton;
 
@@ -51,6 +54,9 @@ private:
     QHash<uint32_t, std::function<void(MessagePtr)>> m_HandleMap;
     QHash<uint32_t, ChatWindow *> m_FriendsChatMap;
     std::list<uint32_t> m_UdpChatList;
+
+    QHash<uint32_t, QListWidgetItem *> m_UsersGroupMap;
+
 
     const uint32_t m_UserId;
     GroupItemInfoPtr m_Me;
@@ -79,6 +85,7 @@ private:
 
     void AddGroupItem(uint32_t GroupId, uint32_t Id, const QString &Name, const QString &OtherName, const QString &Desc, const QString &Profile, int Sex);
     void AddGroupItem(uint32_t GroupId, const GroupItemInfoPtr& info);
+    void AddUsersGroupItem(uint32_t UsersGroupId, const QString& GroupName, const QString GroupDesc, const QString& GroupProfile, bool);
     void DelGroupItem(uint32_t Id, bool clear = true);
     void hideWidget();
     void showWidget();
@@ -87,6 +94,7 @@ private:
     bool InitMySelf();
     bool InitFriendsGroup();
     bool InitFriends();
+    bool InitUserGroups();
     void AddUserGroup(QString &Name, uint32_t GroupID);
     void InitHandle();
     void CreateChatWindow(uint32_t);
@@ -103,6 +111,10 @@ private:
     void ReadyReadUdpData(MessagePtr);
     void AddUdpAddr(MessagePtr);
     void RecvChatData(MessagePtr);
+    void DelUsersGroups(MessagePtr);
+    void ShowUsersGroupInfo(MessagePtr);
+    void ShowUsersGroupMemberList(MessagePtr);
+    void DelGroupMemberSuccess(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -125,6 +137,9 @@ private slots:
     void ChangeGroupItem(void *item);
     void ChangeGroupItemName(void *item);
     void ShowGroupItemInfo(void *item);
+    void ChangeUsersGroupInfo();
+    void RemoveUsersGroupMember();
+    void RemoveUsersGroupItem();
     void MessageRead();
     void HandleMessage(uint32_t, std::shared_ptr<Message>);
 //    void UdpSend();

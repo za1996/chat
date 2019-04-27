@@ -43,6 +43,7 @@ public:
     QString getOtherName() { return m_OtherName; }
     QString getDesc() { return m_Desc; }
     QString getProfile() { return m_Profile; }
+    QString getShowName() { return m_OtherName == "" ? m_Name : m_OtherName; }
     uint32_t getGroupId() { return m_GroupId; }
     bool IsFriendsGroup() { return m_IsFriendsGroup; }
     int getSex() { return m_Sex; }

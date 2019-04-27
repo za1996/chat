@@ -15,6 +15,7 @@ QHash<uint32_t, std::map<uint64_t, VideoPacketPtr>> m_FriendVideoUdpPacketMap;
 QHash<uint32_t, std::map<uint64_t, AudioPacketPtr>> m_FriendAudioUdpPacketMap;
 std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendVideoDataQueueMap;
 std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendAudioDataQueueMap;
+moodycamel::ConcurrentQueue<std::string> m_FileQueue;
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist)
 {
@@ -166,3 +167,59 @@ MessagePtr CreateChatWordMsg(uint32_t FriendId, uint32_t srcID, uint32_t action,
     return m;
 }
 
+MessagePtr CreateDeleteUsersGroups(uint32_t srcID, uint32_t flag, const std::vector<uint32_t> &UsersGroupsVector)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["GroupsId"] = json::array();
+    for(int i = 0; i < UsersGroupsVector.size(); ++i)
+    {
+        info["GroupsId"].push_back(UsersGroupsVector[i]);
+    }
+    m->setHead(srcID, SERVERID, CHANGEINFOGROUP, DELUSERSGROUPSACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateReqUsersGroupInfo(uint32_t srcID, uint32_t flag, uint32_t UsersGroupId)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["GroupId"] = UsersGroupId;
+    m->setHead(srcID, SERVERID, REQINFOGROUP, REQUSERSGROUPINFOACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateReqUsersGroupMember(uint32_t srcID, uint32_t flag, uint32_t UsersGroupId)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["GroupId"] = UsersGroupId;
+    m->setHead(srcID, SERVERID, REQINFOGROUP, REQUSERSGROUPMEMBERACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateDelUsersGroupMembers(uint32_t srcID, uint32_t flag, uint32_t GroupId, const std::vector<uint32_t> &MemberList)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["GroupId"] = GroupId;
+    info["MembersId"] = json::array();
+    for(int i = 0; i < MemberList.size(); ++i)
+    {
+        info["MembersId"].push_back(MemberList[i]);
+    }
+    m->setHead(srcID, SERVERID, CHANGEINFOGROUP, DELUSERSGROUPMEMBERSACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg)
+{
+    auto m = Message::CreateObject();
+    m->setHead(srcID, SERVERID, LOGINEVENTGROUP, SYSTESTLOGACTION, flag);
+    m->setData(msg);
+    return m;
+}

@@ -17,7 +17,7 @@ using json = nlohmann::json;
 
 using namespace cv;
 
-ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, QWidget *parent) :
+ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, const QString &Name, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::ChatWindow),
     m_MeId(Id),
@@ -43,7 +43,7 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, QWidget *parent) :
     m_TitleBar->setButtonType(MIN_BUTTON);
     m_TitleBar->setMargins(5, 0, 0, 0);
     m_TitleBar->loadStyleSheet("D:/titlebarstyle.css");
-    m_TitleBar->setTitleContent("我的好友", 15);
+    m_TitleBar->setTitleContent(Name, 15);
 
 
     m_EmotionWidget = new QTableWidget(5, 5);
@@ -76,6 +76,7 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, QWidget *parent) :
     ui->MsgList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     ui->MsgList->setSelectionRectVisible(false);
     ui->MsgList->setStyleSheet("QListWidget#MsgList::item { background-color:rgba(255,255,255,0%);} QListWidget#MsgList{border-style:none;}");
+    ui->MsgList->setSelectionMode(QAbstractItemView::NoSelection);
 
 
     connect(m_TitleBar, SIGNAL(signalButtonCloseClicked()), this, SLOT(close()));

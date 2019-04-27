@@ -25,7 +25,7 @@ class ChatWindow : public QWidget
     Q_OBJECT
 
 public:
-    explicit ChatWindow(uint32_t Id, uint32_t FriendId, QWidget *parent = 0);
+    explicit ChatWindow(uint32_t Id, uint32_t FriendId, const QString &Name, QWidget *parent = 0);
     ~ChatWindow();
 
     void SetDelHandle(std::function<void(uint32_t)>);

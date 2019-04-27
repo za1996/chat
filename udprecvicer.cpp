@@ -62,6 +62,7 @@ void UdpRecvicer::run()
 //    m_VideoLabel.move(20, 20);
 //    m_VideoLabel.resize(320, 240);
 //    m_VideoLabel.show();
+    auto m = CreateTestMessage(1000, 0, "这是测试消息");
     m_UdpSendAddrTimer->start(500);
     m_UdpVideoDataTimer->start(130);
     m_UdpAudioDataTimer->start(110);
@@ -164,7 +165,8 @@ void UdpRecvicer::UdpAudioSend()
 void UdpRecvicer::UdpRecv()
 {
     qDebug() << "start ready read";
-    static uint64_t maxTimeOk = 0;
+    static uint64_t maxVideoTimeOk = 0;
+    static uint64_t maxAudioTimeOk = 0;
     static int count = 0;
     uint64_t Currenttime = QDateTime::currentDateTime().toMSecsSinceEpoch();
 
@@ -182,15 +184,18 @@ void UdpRecvicer::UdpRecv()
 
         QHash<uint32_t, std::map<uint64_t, UdpPacketPtr>> *FriendUdpPacketMap = nullptr;
         std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> *FriendDataQueueMap = nullptr;
+        uint64_t *maxTimeOk = nullptr;
         if(m->TypeCode() == UDPVIDEOTRANSFERDATA)
         {
             FriendUdpPacketMap = &m_FriendVideoUdpPacketMap;
             FriendDataQueueMap = &m_FriendVideoDataQueueMap;
+            maxTimeOk = &maxVideoTimeOk;
         }
         else if(m->TypeCode() == UDPAUDIOTRANSFERDATA)
         {
             FriendUdpPacketMap = &m_FriendAudioUdpPacketMap;
             FriendDataQueueMap = &m_FriendAudioDataQueueMap;
+            maxTimeOk = &maxAudioTimeOk;
         }
         assert(FriendUdpPacketMap != nullptr && FriendDataQueueMap != nullptr);
         auto packetIt = FriendUdpPacketMap->find(m->srcId());
@@ -215,10 +220,10 @@ void UdpRecvicer::UdpRecv()
             }
             memcpy(packet->data.data() + packetStart, m->data(), packetSize);
             packet->size += packetSize;
-            if(packet->size == totalSize && time > maxTimeOk)
+            if(packet->size == totalSize && time > *maxTimeOk)
             {
 //                Mat frame;
-                maxTimeOk = time;
+                *maxTimeOk = time;
 //                frame = imdecode(Mat(packet->data), IMREAD_COLOR);
 //                m_VideoLabel.setPixmap(QPixmap::fromImage(MatToQImage(frame)).scaled(m_VideoLabel.width(), m_VideoLabel.height()));
                 qDebug() << "isok" << " PackNum : " << packetNum << " time:" << time << "current time : " << Currenttime << " data size : " << packet->data.size();

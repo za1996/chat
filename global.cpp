@@ -223,3 +223,11 @@ MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &m
     m->setData(msg);
     return m;
 }
+
+MessagePtr CreateFileDataUploadMsg(uint32_t srcID, uint32_t flag, const char* buf, int size)
+{
+    auto m = Message::CreateObject();
+    m->setHead(srcID, SERVERID, FILETRANSFERGROUP, UPLOADFILEDATAACTION, flag);
+    m->setData(buf, size);
+    return m;
+}

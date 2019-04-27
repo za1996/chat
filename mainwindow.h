@@ -22,6 +22,7 @@
 #include "udprecvicer.h"
 #include "usersgroupitem.h"
 #include "concurrentqueue.h"
+#include "deleteusersgroupmemberwin.h"
 
 class MainWindow : public QWidget
 {
@@ -45,6 +46,7 @@ private:
     QAction *m_addUsersGroup;
     QPushButton *m_ShowFriendsGroupTreeButton;
     QPushButton *m_ShowUsersGroupListButton;
+    DeleteUsersGroupMemberWin *m_DEUGMWindow;
 
 
     QHash<QString, QTreeWidgetItem *> *m_GroupMap;
@@ -56,6 +58,7 @@ private:
     std::list<uint32_t> m_UdpChatList;
 
     QHash<uint32_t, QListWidgetItem *> m_UsersGroupMap;
+    QHash<uint32_t, DeleteUsersGroupMemberWin*> m_DEUGMWindowMap;
 
 
     const uint32_t m_UserId;

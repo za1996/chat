@@ -31,7 +31,8 @@ private:
 
 
 public slots:
-    void HandMessage(uint32_t, MessagePtr);
+
+    void HandMessage(uint32_t, std::shared_ptr<Message>);
 
 };
 

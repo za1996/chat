@@ -25,6 +25,7 @@ MessagePtr CreateReqUsersGroupInfo(uint32_t srcID, uint32_t flag, uint32_t Users
 MessagePtr CreateReqUsersGroupMember(uint32_t srcID, uint32_t flag, uint32_t UsersGroupId);
 MessagePtr CreateDelUsersGroupMembers(uint32_t srcID, uint32_t flag, uint32_t GroupId, const std::vector<uint32_t> &MemberList);
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg);
+MessagePtr CreateFileDataUploadMsg(uint32_t srcID, uint32_t flag, const char* buf, int size);
 typedef std::shared_ptr<UdpPacket> UdpPacketPtr;
 typedef UdpPacketPtr VideoPacketPtr;
 typedef UdpPacketPtr AudioPacketPtr;

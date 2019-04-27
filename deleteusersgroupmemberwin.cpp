@@ -51,6 +51,7 @@ DeleteUsersGroupMemberWin::DeleteUsersGroupMemberWin(QWidget *parent, const std:
 
 DeleteUsersGroupMemberWin::~DeleteUsersGroupMemberWin()
 {
+    qDebug() << "~DeleteUsersGroupMemberWin";
     delete ui;
 }
 
@@ -76,7 +77,7 @@ void DeleteUsersGroupMemberWin::paintEvent(QPaintEvent *event)
     this->QWidget::paintEvent(event);
 }
 
-void DeleteUsersGroupMemberWin::HandMessage(uint32_t id, MessagePtr m)
+void DeleteUsersGroupMemberWin::HandMessage(uint32_t id, std::shared_ptr<Message> m)
 {
     qDebug() << __FUNCTION__;
     if(id == SERVERID)

@@ -2,14 +2,18 @@
 #define MESSAGETYPE_H
 
 #define SERVERID 0
+#define ERRORID 0xffffffff
 
 #define LOGINEVENTGROUP 0x0
 #define REQINFOGROUP 0x1
 #define CHANGEINFOGROUP 0x2
 #define REQUDPEVENTGROUP 0x3
 #define TRANSFERDATAGROUP 0x4
+#define FILETRANSFERGROUP 0xfe
 #define UDPEVENTGROUP 0xff
 
+
+#define RESFILESENDERGROUP 0xfff
 #define RESTRANSFERGROUP 0xfffb
 #define RESUDPREQGROUP 0xfffc
 #define RESCHANGEGROUP 0xfffd
@@ -48,6 +52,10 @@
 
 //0x4
 #define TRANSFERCHATDATAACTION 0x0
+
+//0xfe
+#define UPLOADFILEDATAACTION 0x0
+
 
 
 //0xff

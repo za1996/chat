@@ -62,7 +62,6 @@ void UdpRecvicer::run()
 //    m_VideoLabel.move(20, 20);
 //    m_VideoLabel.resize(320, 240);
 //    m_VideoLabel.show();
-    auto m = CreateTestMessage(1000, 0, "这是测试消息");
     m_UdpSendAddrTimer->start(500);
     m_UdpVideoDataTimer->start(130);
     m_UdpAudioDataTimer->start(110);

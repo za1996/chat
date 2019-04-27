@@ -8,7 +8,6 @@
 #include <nlohmann/json.hpp>
 #include "groupiteminfo.h"
 #include "usersgroupinfo.h"
-#include "deleteusersgroupmemberwin.h"
 #include <functional>
 #include <iostream>
 
@@ -507,9 +506,10 @@ void MainWindow::ShowUsersGroupMemberList(MessagePtr m)
     }
     qDebug() << __FUNCTION__;
 
-    DeleteUsersGroupMemberWin *w = new DeleteUsersGroupMemberWin(nullptr, map, GroupId, m_UserId);
-    w->show();
-    connect(this, SIGNAL(HasMessage(uint32_t,std::shared_ptr<Message>)), w, SLOT(HandMessage(uint32_t,MessagePtr)));
+    m_DEUGMWindow = new DeleteUsersGroupMemberWin(nullptr, map, GroupId, m_UserId);
+    m_DEUGMWindow->show();
+    connect(this, SIGNAL(HasMessage(uint32_t,std::shared_ptr<Message>)), m_DEUGMWindow, SLOT(HandMessage(uint32_t,std::shared_ptr<Message>)));
+//    m_DEUGMWindowMap.insert(GroupId, m_DEUGMWindow);
 }
 
 void MainWindow::DelGroupMemberSuccess(MessagePtr m)

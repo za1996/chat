@@ -30,10 +30,13 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <map>
+#include <QThread>
 
 using nlohmann::json;
 using namespace cv;
 using moodycamel::ConcurrentQueue;
+
+MainWindow *m_MainWin;
 
 MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     QWidget(parent)
@@ -42,10 +45,13 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
   , m_UserId(UserId)
   , m_UdpPort(-1)
   , m_UdpRecvicer(nullptr)
+  , m_TcpFileRecvicer(nullptr)
+  , m_IsDowloadNow(false)
 {
     this->setWindowFlags(Qt::X11BypassWindowManagerHint | Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
 
     //init
+    m_ThisIsId = UserId;
     m_MainBoard = new QWidget(this);
     m_TitleBar = new TitleBar(this);
     m_GroupTree = new QTreeWidget(m_MainBoard);
@@ -141,6 +147,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     connect(m_GroupTree, SIGNAL(itemClicked(QTreeWidgetItem*,int)), this, SLOT(onGroupItemClick(QTreeWidgetItem*,int)));
     connect(m_GroupTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)), this, SLOT(onGroupItemDoubleClick(QTreeWidgetItem*,int)));
     connect(m_addGroup, SIGNAL(triggered(bool)), this, SLOT(AddUserGroup()));
+    connect(this, SIGNAL(FileDataBlockRecv(uint32_t, uint32_t, int, int)), this, SLOT(HandleRecvFileData(uint32_t, uint32_t, int, int)));
 //    connect(&m_ShowVideoTimer, SIGNAL(timeout()), this, SLOT(ShowVideo()));
 
 
@@ -148,7 +155,6 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 //    connect(&m_UdpSocket, SIGNAL(readyRead()), this, SLOT(UdpRead()));
     connect(m_ShowFriendsGroupTreeButton, SIGNAL(clicked(bool)), this, SLOT(ShowFriendsGroupTree()));
     connect(m_ShowUsersGroupListButton, SIGNAL(clicked(bool)), this, SLOT(ShowUserGroupList()));
-
     qDebug() << "TitleBar Height" << m_TitleBar->height() << endl;
 
 //    QTreeWidgetItem *pRootFriendItem = new QTreeWidgetItem();
@@ -164,8 +170,18 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 //    {
 //        AddGroupItem(pRootFriendItem);
 //    }
+    qDebug() << "start thread";
+    m_TcpFile = new TcpFileThread();
+    m_TcpFile->SetUserId(m_UserId);
+    m_TcpFile->start(QThread::HighPriority);
+    qDebug() << "start m_TcpFile";
+    m_TcpFileRecvicer = new TcpFileRecvicer();
+    m_TcpFileRecvicer->SetUserId(m_UserId);
+    m_TcpFileRecvicer->start(QThread::HighPriority);
+    qDebug() << "start m_TcpFileRecvicer";
     InitHandle();
     GetRemoteInfo();
+    InitDir();
     m_GroupTree->collapseAll();
 }
 
@@ -182,6 +198,11 @@ MainWindow::~MainWindow()
 //    delete m_GroupIdMap;
 //    delete m_FriendsMap;
 
+}
+
+void MainWindow::EmitRecvFileData(uint32_t FileNum, uint32_t Id, int FileCode, int Size)
+{
+    emit FileDataBlockRecv(FileNum, Id, FileCode, Size);
 }
 
 
@@ -527,7 +548,125 @@ void MainWindow::DelGroupMemberSuccess(MessagePtr m)
     }
 }
 
+void MainWindow::ReadySendProfile(MessagePtr m)
+{
+    qDebug() << __FUNCTION__;
+    json info = json::parse((char *)m->data());
+    uint32_t ClientFileNum = info["ClientFileNum"].get<json::number_unsigned_t>();
+    uint32_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    auto it = m_ClientFileNumMap.find(ClientFileNum);
+    assert(it != m_ClientFileNumMap.end());
+    if(it != m_ClientFileNumMap.end())
+    {
+        m_RemoteFileNumMap.insert(FileNum, *it);
+        m_TcpFile->AddFile(FileNum, *it);
+        m_ClientFileNumMap.erase(it);
+    }
+
+}
+
+void MainWindow::DownloadFileData(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    info = info["Files"];
+    for(int i = 0; i < info.size(); ++i)
+    {
+        qDebug() << __FUNCTION__;
+        int FileCode = info[i]["FileCode"].get<int>();
+        uint32_t Id = info[i]["Id"].get<json::number_unsigned_t>();
+        int Size = info[i]["Length"].get<int>();
+        std::string Name = info[i]["FileName"].get<std::string>();
+        uint32_t FileNum = info[i]["FileNum"].get<json::number_unsigned_t>();
+        std::string Path;
+        if(FileCode == DOWNLOADUSERPROFILE)
+        {
+            Path = QString("%1/%2/%3/").arg(CACHEPATH).arg(Id).arg("profile").toStdString();
+        }
+        else
+        {
+            continue;
+        }
+        m_DowloadFileMap.insert(FileNum, DowloadFileItem(FileNum, Id, Size, FileCode, Name, Path));
+    }
+    m_IsDowloadNow = true;
+    DowloadFile();
+}
+
+
+
+void MainWindow::SignalTest()
+{
+    qDebug() << __FUNCTION__;
+    emit Test();
+}
+
 //private
+
+void MainWindow::DowloadFile()
+{
+    qDebug() << __FUNCTION__;
+    if(m_IsDowloadNow)
+    {
+        if(!m_FileNumStoreMap.size())
+        {
+            qDebug() << " map size " << m_DowloadFileMap.size();
+            if(m_DowloadFileMap.size())
+            {
+                auto it = m_DowloadFileMap.begin();
+                QString FullName = QString("%1%2").arg(QString::fromStdString((*it).LocalPath)).arg(QString::fromStdString((*it).Name));
+                qDebug() << "FullName : " << FullName;
+                std::shared_ptr<QFile> file(new QFile(FullName));
+                file->open(QIODevice::WriteOnly | QIODevice::Truncate);
+                m_FileNumStoreMap.insert((*it).RemoteFileNum, file);
+            }
+            else
+            {
+                m_IsDowloadNow = false;
+            }
+        }
+        if(m_FileNumStoreMap.size())
+        {
+            qDebug() << "FileNum" << *(m_FileNumStoreMap.keyBegin());
+            auto m = CreateDownloadFileDataMsg(m_UserId, 0, *(m_FileNumStoreMap.keyBegin()));
+            SendtoRemote(s, m);
+        }
+    }
+}
+
+void MainWindow::GetFriendsProfile()
+{
+    json info;
+    info["Friends"] = json::array();
+    info["UsersGroups"] = json::array();
+    for(auto it = m_FriendsMap->begin(); it != m_FriendsMap->end(); ++it)
+    {
+        json item;
+        uint32_t Id = (*it)->getId();
+        QString Profile = (*it)->getProfile();
+        int FileCode = DOWNLOADUSERPROFILE;
+        if(!Profile.isEmpty())
+        {
+            item["Id"] = Id;
+            item["FileName"] = Profile.toStdString();
+            item["FileCode"] = FileCode;
+            info["Friends"].push_back(item);
+        }
+    }
+    json item;
+    uint32_t Id = m_Me->getId();
+    QString Profile = m_Me->getProfile();
+    int FileCode = DOWNLOADUSERPROFILE;
+    if(!Profile.isEmpty())
+    {
+        item["Id"] = Id;
+        item["FileName"] = Profile.toStdString();
+        item["FileCode"] = FileCode;
+        info["Friends"].push_back(item);
+    }
+    auto m = CreateReqDownloadProfile(m_UserId, 0, info);
+    SendtoRemote(s, m);
+}
+
 
 void MainWindow::InitHandle()
 {
@@ -547,6 +686,9 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE), std::bind(&MainWindow::ReadyReadUdpData, this, std::placeholders::_1));
 
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERCHATDATAACTION), std::bind(&MainWindow::RecvChatData, this, std::placeholders::_1));
+
+    m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADYPROFILETRANSER), std::bind(&MainWindow::ReadySendProfile, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADFILESOPENCODE), std::bind(&MainWindow::DownloadFileData, this, std::placeholders::_1));
 }
 
 
@@ -730,7 +872,7 @@ void MainWindow::CreateChatWindow(uint32_t FriendId)
         assert(fit != m_FriendsMap->end());
         ChatWindow *w = new ChatWindow(m_UserId, FriendId, (*fit)->getShowName());
         connect(this, SIGNAL(HasMessage(uint32_t,std::shared_ptr<Message>)), w, SLOT(HandleMessage(uint32_t,std::shared_ptr<Message>)));
-        connect(this, SIGNAL(ChatWindowReadyReadUdp(uint32_t)), w, SLOT(StartReadyShowVideo(uint32_t)));
+//        connect(this, SIGNAL(ChatWindowReadyReadUdp(uint32_t)), w, SLOT(StartReadyShowVideo(uint32_t)));
         connect(w, SIGNAL(ChatWindowUdpChatEnd(uint32_t)), this, SLOT(RemoveUdpChatFriend(uint32_t)));
         m_FriendsChatMap.insert(FriendId, w);
         w->SetDelHandle(std::bind(&MainWindow::DelChatWindow, this, std::placeholders::_1));
@@ -886,6 +1028,37 @@ bool MainWindow::InitUserGroups()
     return false;
 }
 
+void MainWindow::InitDir()
+{
+    auto ulist = m_FriendsMap->keys();
+    for(auto it = ulist.begin(); it != ulist.end(); ++it)
+    {
+        QString path = QString("%1/%2/%3").arg("E:/University_Final_Text_Qt_Project/cache").arg(*it).arg("profile");
+        CreateDir(path);
+    }
+
+    auto glist = m_UsersGroupMap.keys();
+    for(auto it = glist.begin(); it != glist.end(); ++it)
+    {
+        QString path = QString("%1/%2/%3/%4").arg("E:/University_Final_Text_Qt_Project/cache").arg("groups").arg(*it).arg("profile");
+        CreateDir(path);
+    }
+}
+
+bool MainWindow::CreateDir(QString fullPath)
+{
+    QDir dir(fullPath);
+    if(dir.exists())
+    {
+      return true;
+    }
+    else
+    {
+       bool ok = dir.mkpath(fullPath);//创建多级目录
+       return ok;
+    }
+}
+
 
 
 //slot
@@ -955,6 +1128,7 @@ void MainWindow::onGroupItemDoubleClick(QTreeWidgetItem *pitem, int col)
 
         CreateChatWindow(pitem->data(0, Qt::UserRole).value<uint32_t>());
     }
+    GetFriendsProfile();
 }
 
 void MainWindow::DelGroupItem(void *item)
@@ -1089,6 +1263,13 @@ void MainWindow::ShowUserGroupList()
 {
     m_UsersGroupList->show();
     m_UsersGroupList->raise();
+}
+
+void MainWindow::HandleRecvFileData(uint32_t FileNum, uint32_t Id, int FileCode, int Size)
+{
+    qDebug() << __FUNCTION__;
+    qDebug() << "FileNum : " << FileNum << " Id : " << Id << " FileCode : " << FileCode << " Size : " << Size;
+    DowloadFile();
 }
 
 //void MainWindow::UdpSend()

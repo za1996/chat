@@ -230,8 +230,8 @@ void LoginWindow::onLoginIn()
     }
     if(!m->isError())
     {
-        MainWindow *w = new MainWindow(ui->accountComboBox->currentText().toInt());
-        w->show();
+        m_MainWin = new MainWindow(ui->accountComboBox->currentText().toInt());
+        m_MainWin->show();
         this->close();
     }
     else

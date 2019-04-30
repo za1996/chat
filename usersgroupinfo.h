@@ -23,6 +23,7 @@ protected:
 private:
     Ui::UsersGroupInfo *ui;
     TitleBar *m_TitleBar;
+    uint32_t m_GroupId;
 };
 
 #endif // USERSGROUPINFO_H

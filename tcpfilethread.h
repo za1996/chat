@@ -16,6 +16,8 @@ public:
     TcpFileThread();
     void SetUserId(uint32_t Id) { m_UserId = Id; }
     void run();
+    void AddFile(uint32_t FileNum, std::string FileName);
+    void SendSignal(uint32_t FileNum, uint32_t Id, int FileCode, int Size);
 
 private:
     uint32_t m_UserId;
@@ -24,9 +26,10 @@ private:
     QString *m_FileName;
 
 
-    QMutex m_mutex;
+    QMutex *m_mutex;
 
     void send();
+    bool SendtoRemote(MessagePtr m);
 
 private slots:
     void read();

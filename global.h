@@ -7,6 +7,9 @@
 #include <QtNetwork>
 #include "message.h"
 #include "concurrentqueue.h"
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist);
 bool SendtoRemote(QTcpSocket &s, MessagePtr m);
@@ -24,8 +27,14 @@ MessagePtr CreateDeleteUsersGroups(uint32_t srcID, uint32_t flag, const std::vec
 MessagePtr CreateReqUsersGroupInfo(uint32_t srcID, uint32_t flag, uint32_t UsersGroupId);
 MessagePtr CreateReqUsersGroupMember(uint32_t srcID, uint32_t flag, uint32_t UsersGroupId);
 MessagePtr CreateDelUsersGroupMembers(uint32_t srcID, uint32_t flag, uint32_t GroupId, const std::vector<uint32_t> &MemberList);
+MessagePtr CreateFileDataUploadMsg(uint32_t srcID, uint32_t flag, const char* buf, int size, uint32_t FileNum);
+MessagePtr CreateSocketMergeMsg(uint32_t flag, uint32_t ChangeId, uint16_t SocketCode);
+MessagePtr CreateReadySendProfileMsg(uint32_t srcID, uint32_t flag, uint32_t ClientFileNum, std::string FileName, int FileCode, uint32_t id);
+MessagePtr CreateSendProfileEndMsg(uint32_t srcID, uint32_t flag, uint32_t FileNum);
+MessagePtr CreateReqDownloadProfile(uint32_t srcID, uint32_t flag, const json& info);
+MessagePtr CreateDownloadFileDataMsg(uint32_t srcID, uint32_t flag, uint32_t FileId);
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg);
-MessagePtr CreateFileDataUploadMsg(uint32_t srcID, uint32_t flag, const char* buf, int size);
+
 typedef std::shared_ptr<UdpPacket> UdpPacketPtr;
 typedef UdpPacketPtr VideoPacketPtr;
 typedef UdpPacketPtr AudioPacketPtr;
@@ -34,11 +43,18 @@ extern QHash<uint32_t, std::map<uint64_t, VideoPacketPtr>> m_FriendVideoUdpPacke
 extern QHash<uint32_t, std::map<uint64_t, AudioPacketPtr>> m_FriendAudioUdpPacketMap;
 extern std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendVideoDataQueueMap;
 extern std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendAudioDataQueueMap;
-extern moodycamel::ConcurrentQueue<std::string> m_FileQueue;
+extern moodycamel::ConcurrentQueue<SendFileItem> m_FileQueue;
+extern std::atomic_int32_t m_ClientFileNum;
+extern QHash<uint32_t, std::string> m_ClientFileNumMap;
+extern QHash<uint32_t, std::string> m_RemoteFileNumMap;
+extern QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumStoreMap;
+extern QHash<uint32_t, DowloadFileItem> m_DowloadFileMap;
+extern uint32_t m_ThisIsId;
 //#define UDP_MAX_SIZE 14336
 #define UDP_MAX_SIZE 1436
 #define UDP_MAX_DELAY 200
 #define TIMEMAGICNUMER 60000
 #define AUDIO_FREQ 8000
+#define CACHEPATH "E:/University_Final_Text_Qt_Project/cache"
 
 #endif // GLOBAL_H

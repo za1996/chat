@@ -7,7 +7,8 @@
 
 UsersGroupInfo::UsersGroupInfo(QWidget *parent, const QString& Name, uint32_t id, const QString& Desc, const QString& Profile, bool Editable) :
     QWidget(parent),
-    ui(new Ui::UsersGroupInfo)
+    ui(new Ui::UsersGroupInfo),
+    m_GroupId(id)
 {
     ui->setupUi(this);
 
@@ -77,7 +78,7 @@ bool UsersGroupInfo::eventFilter(QObject *watched, QEvent *event)
             QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
             if(mouseEvent->button() == Qt::LeftButton)
             {
-                ProfileUploadWin *w = new ProfileUploadWin();
+                ProfileUploadWin *w = new ProfileUploadWin(m_GroupId);
                 w->show();
                 return true;
             }

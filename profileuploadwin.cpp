@@ -5,11 +5,15 @@
 #include <QPainter>
 #include <QPalette>
 #include <QtCore/qmath.h>
+#include <QDebug>
+#include "global.h"
 
-ProfileUploadWin::ProfileUploadWin(QWidget *parent) :
+
+ProfileUploadWin::ProfileUploadWin(uint32_t id, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::ProfileUploadWin),
-    m_Img(nullptr)
+    m_Img(nullptr),
+    m_UsersGroupId(id)
 {
     ui->setupUi(this);
 
@@ -49,11 +53,12 @@ ProfileUploadWin::~ProfileUploadWin()
 
 void ProfileUploadWin::SelectFile()
 {
-    QString file =QFileDialog::getOpenFileName(this, tr("选择文件"), "C:", tr("Images(*.png *.jpg *.jpeg *.bmp)"));
-    if(file != "")
+    m_File = QFileDialog::getOpenFileName(this, tr("选择文件"), "C:", tr("Images(*.png *.jpg *.jpeg *.bmp)"));
+    qDebug() << m_File;
+    if(m_File != "")
     {
         if(m_Img) delete m_Img;
-        m_Img = new QImage(file);
+        m_Img = new QImage(m_File);
         m_Label->setPixmap(QPixmap::fromImage(*m_Img));
         m_Label->resize(m_Img->size());
         ui->ProfileArea->setWidget(m_Label);
@@ -63,15 +68,35 @@ void ProfileUploadWin::SelectFile()
 
 void ProfileUploadWin::ReadImg()
 {
-    QImage m = m_Img->copy(ui->ProfileArea->horizontalScrollBar()->value(), ui->ProfileArea->verticalScrollBar()->value(), 150, 150);
-    ui->Size150Img->setPixmap(QPixmap::fromImage(m));
-    ui->Size100Img->setPixmap(QPixmap::fromImage(m).scaled(100, 100));
-    ui->Size50Img->setPixmap(QPixmap::fromImage(m).scaled(50, 50));
+    if(!m_File.isEmpty())
+    {
+        QImage m = m_Img->copy(ui->ProfileArea->horizontalScrollBar()->value(), ui->ProfileArea->verticalScrollBar()->value(), 150, 150);
+        ui->Size150Img->setPixmap(QPixmap::fromImage(m));
+        ui->Size100Img->setPixmap(QPixmap::fromImage(m).scaled(100, 100));
+        ui->Size50Img->setPixmap(QPixmap::fromImage(m).scaled(50, 50));
+    }
 }
 
 void ProfileUploadWin::UploadImg()
 {
-
+    if(!m_File.isEmpty())
+    {
+//        info["FileName"] = m_File.split('/').last()->toStdString();
+//        uint32_t ClientFileNum = m_ClientFileNum++;
+//        info["ClientFileNum"] = ClientFileNum;
+        QImage img = m_Img->copy(ui->ProfileArea->horizontalScrollBar()->value(), ui->ProfileArea->verticalScrollBar()->value(), 150, 150);
+        uint32_t ClientFileNum = m_ClientFileNum++;
+        QString Name = QString("%1%2").arg(ClientFileNum).arg(m_File.split('/').last());
+        QString path = QString("%1/%2/%3/%4").arg("E:/University_Final_Text_Qt_Project/cache").arg(m_ThisIsId).arg("profile").arg(Name);
+        qDebug() << __FUNCTION__;
+        qDebug() << Name;
+        qDebug() << path;
+        img.save(path);
+        auto m = CreateReadySendProfileMsg(m_ThisIsId, 0, ClientFileNum, Name.toStdString(), UPLOADUSERSGROUPPROFILE, m_UsersGroupId);
+        SendtoRemote(s, m);
+        m_ClientFileNumMap.insert(ClientFileNum, path.toStdString());
+        this->close();
+    }
 }
 
 void ProfileUploadWin::paintEvent(QPaintEvent *event)

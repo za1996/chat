@@ -7,6 +7,27 @@
 #include "messagetype.h"
 
 
+struct SendFileItem
+{
+    uint32_t RemoteFileNum;
+    std::string FileName;
+    SendFileItem() : RemoteFileNum(0) {}
+    SendFileItem(uint32_t FileNum, const std::string Name) : RemoteFileNum(FileNum), FileName(Name) {}
+};
+
+struct DowloadFileItem
+{
+    uint32_t RemoteFileNum;
+    uint32_t Id;
+    int Length;
+    int FileCode;
+    std::string Name;
+    std::string LocalPath;
+    DowloadFileItem() {}
+    DowloadFileItem(uint32_t FileNum, uint32_t id, int length, int code, const std::string &name, const std::string &path) :
+        RemoteFileNum(FileNum), Id(id), Length(length), FileCode(code), Name(name), LocalPath(path) {}
+};
+
 
 struct UdpPacket
 {
@@ -48,6 +69,7 @@ public:
     void setHead(uint32_t srcId, uint32_t destId, uint32_t mType1, uint32_t mType2, uint32_t flag);
     void setHead(const MsgHead& head);
     void setUdpInfo(uint16_t totalSize, uint16_t packetStart, uint32_t packetNum, uint64_t time);
+    void setTcpFileNum(uint32_t FileNum);
 
     void setData(const char* buf, const int n);
     void setData(const std::string &data);
@@ -67,6 +89,7 @@ public:
     uint32_t TypeCode() { return TYPEACTION(m_msgHead.msg_type); }
     uint32_t Type() { return m_msgHead.msg_type; }
     uint32_t dataSize() { return m_msgHead.msg_len; }
+    uint32_t GetSpace(int n) { return m_msgHead.space[n]; }
 
     void getUdpInfo(uint32_t &packetNum, uint16_t &totalSize, uint16_t &packetStart, uint64_t &time);
 

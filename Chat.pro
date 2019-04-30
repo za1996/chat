@@ -46,7 +46,8 @@ SOURCES += \
     usersgroupinfo.cpp \
     deleteusersgroupmemberwin.cpp \
     profileuploadwin.cpp \
-    tcpfilethread.cpp
+    tcpfilethread.cpp \
+    tcpfilerecvicer.cpp
 
 HEADERS += \
         loginwindow.h \
@@ -71,7 +72,8 @@ HEADERS += \
     usersgroupinfo.h \
     deleteusersgroupmemberwin.h \
     profileuploadwin.h \
-    tcpfilethread.h
+    tcpfilethread.h \
+    tcpfilerecvicer.h
 
 FORMS += \
         loginwindow.ui \

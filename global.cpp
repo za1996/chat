@@ -6,8 +6,7 @@
 #include <vector>
 #include <QtNetwork>
 #include <QAbstractSocket>
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
+
 
 
 QTcpSocket s;
@@ -15,7 +14,13 @@ QHash<uint32_t, std::map<uint64_t, VideoPacketPtr>> m_FriendVideoUdpPacketMap;
 QHash<uint32_t, std::map<uint64_t, AudioPacketPtr>> m_FriendAudioUdpPacketMap;
 std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendVideoDataQueueMap;
 std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendAudioDataQueueMap;
-moodycamel::ConcurrentQueue<std::string> m_FileQueue;
+moodycamel::ConcurrentQueue<SendFileItem> m_FileQueue;
+std::atomic_int32_t m_ClientFileNum = 0;
+QHash<uint32_t, std::string> m_ClientFileNumMap;
+QHash<uint32_t, std::string> m_RemoteFileNumMap;
+QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumStoreMap;
+QHash<uint32_t, DowloadFileItem> m_DowloadFileMap;
+uint32_t m_ThisIsId;
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist)
 {
@@ -23,7 +28,8 @@ int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist)
     int count = 0;
     bool all = (n <= 0);
     if(n == 0) goto end;
-    while(s.size() >= sizeof(MsgHead) || (m->hasHead() && m->dataSize() >= s.size()))
+    qDebug() << "size start : " << s.size();
+    while((!m->hasHead() && s.size() >= sizeof(MsgHead)) || (m->hasHead() && m->dataSize() <= s.size()))
     {
         if(m->hasHead())
         {
@@ -45,6 +51,7 @@ int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist)
             m->setHead(temp);
         }
     }
+    qDebug() << "size end : " << s.size();
 
 end:
     return count;
@@ -216,18 +223,72 @@ MessagePtr CreateDelUsersGroupMembers(uint32_t srcID, uint32_t flag, uint32_t Gr
     return m;
 }
 
+MessagePtr CreateSocketMergeMsg(uint32_t flag, uint32_t ChangeId, uint16_t SocketCode)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["ChangeId"] = ChangeId;
+    info["SocketCode"] = SocketCode;
+    m->setHead(REQID, SERVERID, LOGINEVENTGROUP, SOCKETMERGEACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateFileDataUploadMsg(uint32_t srcID, uint32_t flag, const char* buf, int size, uint32_t FileNum)
+{
+    auto m = Message::CreateObject();
+    m->setHead(srcID, SERVERID, FILETRANSFERGROUP, UPLOADFILEDATAACTION, flag);
+    m->setTcpFileNum(FileNum);
+    m->setData(buf, size);
+    return m;
+}
+
+MessagePtr CreateReadySendProfileMsg(uint32_t srcID, uint32_t flag, uint32_t ClientFileNum, std::string FileName, int FileCode, uint32_t id)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["FileName"] = FileName;
+    info["ClientFileNum"] = ClientFileNum;
+    info["FileCode"] = FileCode;
+    info["Id"] = id;
+    m->setHead(srcID, SERVERID, FILETRANSFERGROUP, READYSENDPROFILEACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateSendProfileEndMsg(uint32_t srcID, uint32_t flag, uint32_t FileNum)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["FileNum"] = FileNum;
+    m->setHead(srcID, SERVERID, FILETRANSFERGROUP, WRITEPROFILEENDACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateReqDownloadProfile(uint32_t srcID, uint32_t flag, const json& info)
+{
+    auto m = Message::CreateObject();
+    m->setHead(srcID, SERVERID, FILETRANSFERGROUP, REQREADFILESOPENACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+
+MessagePtr CreateDownloadFileDataMsg(uint32_t srcID, uint32_t flag, uint32_t FileId)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["FileNum"] = FileId;
+    m->setHead(srcID, SERVERID, FILETRANSFERGROUP, REQREADFILEDATAACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg)
 {
     auto m = Message::CreateObject();
     m->setHead(srcID, SERVERID, LOGINEVENTGROUP, SYSTESTLOGACTION, flag);
     m->setData(msg);
-    return m;
-}
-
-MessagePtr CreateFileDataUploadMsg(uint32_t srcID, uint32_t flag, const char* buf, int size)
-{
-    auto m = Message::CreateObject();
-    m->setHead(srcID, SERVERID, FILETRANSFERGROUP, UPLOADFILEDATAACTION, flag);
-    m->setData(buf, size);
     return m;
 }

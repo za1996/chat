@@ -23,6 +23,8 @@
 #include "usersgroupitem.h"
 #include "concurrentqueue.h"
 #include "deleteusersgroupmemberwin.h"
+#include "tcpfilethread.h"
+#include "tcpfilerecvicer.h"
 
 class MainWindow : public QWidget
 {
@@ -30,6 +32,9 @@ class MainWindow : public QWidget
 public:
     explicit MainWindow(uint32_t UserId, QWidget *parent = nullptr);
     ~MainWindow();
+
+    void SignalTest();
+    void EmitRecvFileData(uint32_t, uint32_t, int, int);
 
 private:
     enum {SPACESIZE = 10, PROFILESIZE = 80};
@@ -65,6 +70,9 @@ private:
     GroupItemInfoPtr m_Me;
     QTimer m_ShowVideoTimer;
     UdpRecvicer *m_UdpRecvicer;
+    TcpFileThread *m_TcpFile;
+    TcpFileRecvicer *m_TcpFileRecvicer;
+
 
 
     int m_UdpPort;
@@ -83,9 +91,10 @@ private:
     bool m_bIsAutoHide;
     Driection m_enDriection;
     int m_nDesktopWidth;
+    bool m_IsDowloadNow;
 
 
-
+    void GetFriendsProfile();
     void AddGroupItem(uint32_t GroupId, uint32_t Id, const QString &Name, const QString &OtherName, const QString &Desc, const QString &Profile, int Sex);
     void AddGroupItem(uint32_t GroupId, const GroupItemInfoPtr& info);
     void AddUsersGroupItem(uint32_t UsersGroupId, const QString& GroupName, const QString GroupDesc, const QString& GroupProfile, bool);
@@ -98,12 +107,15 @@ private:
     bool InitFriendsGroup();
     bool InitFriends();
     bool InitUserGroups();
+    void InitDir();
+    bool CreateDir(QString fullPath);
     void AddUserGroup(QString &Name, uint32_t GroupID);
     void InitHandle();
     void CreateChatWindow(uint32_t);
     void DelChatWindow(uint32_t);
     void UdpSendToRemote(uint32_t FriendId, int PacketNum, const char *data, int size);
     QImage MatToQImage(cv::Mat &mtx);
+    void DowloadFile();
 
 
     void ShowUserInfo(MessagePtr);
@@ -118,6 +130,8 @@ private:
     void ShowUsersGroupInfo(MessagePtr);
     void ShowUsersGroupMemberList(MessagePtr);
     void DelGroupMemberSuccess(MessagePtr);
+    void ReadySendProfile(MessagePtr m);
+    void DownloadFileData(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -130,6 +144,8 @@ protected:
 
 signals:
     void HasMessage(uint32_t, std::shared_ptr<Message>);
+    void Test();
+    void FileDataBlockRecv(uint32_t, uint32_t, int, int);
 
 private slots:
     void onGroupItemClick(QTreeWidgetItem *pitem, int col);
@@ -151,6 +167,9 @@ private slots:
 
     void ShowFriendsGroupTree();
     void ShowUserGroupList();
+    void HandleRecvFileData(uint32_t, uint32_t, int, int);
 };
+
+extern MainWindow *m_MainWin;
 
 #endif // MAINWINDOW_H

@@ -11,26 +11,29 @@ struct SendFileItem
 {
     uint32_t RemoteFileNum;
     uint32_t Id;
+    int Length;
+    int NowLength;
     int FileCode;
     std::string FileName;
     SendFileItem() : RemoteFileNum(0) {}
-    SendFileItem(uint32_t FileNum, uint32_t id, int code, const std::string Name) : RemoteFileNum(FileNum), Id(id), FileCode(code), FileName(Name) {}
+    SendFileItem(uint32_t FileNum, uint32_t id, int length, int code, const std::string Name) :
+        RemoteFileNum(FileNum), Length(length), Id(id), FileCode(code), FileName(Name), NowLength(0) {}
 };
 
 struct DowloadFileItem
 {
-    uint32_t RemoteFileNum;
+    uint32_t FileNum;
     uint32_t Id;
     int Length;
     int FileCode;
     std::string Name;
     std::string LocalPath;
-    uint32_t LocalFileNum;
+    uint32_t SenderFileNum; //远方发过来的FileNum 发回去 由被动方确定FileNum
     DowloadFileItem() {}
     DowloadFileItem(uint32_t FileNum, uint32_t id, int length, int code, const std::string &name, const std::string &path) :
-        RemoteFileNum(FileNum), Id(id), Length(length), FileCode(code), Name(name), LocalPath(path), LocalFileNum(0) {}
+        FileNum(FileNum), Id(id), Length(length), FileCode(code), Name(name), LocalPath(path), SenderFileNum(0) {}
     DowloadFileItem(uint32_t FileNum, uint32_t id, int length, int code, const std::string &name, const std::string &path, uint32_t LocalNum) :
-        RemoteFileNum(FileNum), Id(id), Length(length), FileCode(code), Name(name), LocalPath(path), LocalFileNum(LocalNum) {}
+        FileNum(FileNum), Id(id), Length(length), FileCode(code), Name(name), LocalPath(path), SenderFileNum(LocalNum) {}
 };
 
 

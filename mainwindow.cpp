@@ -215,7 +215,36 @@ void MainWindow::AddDownloadFile(uint32_t FileNum, const DowloadFileItem &info)
 {
     m_DowloadFileMap.insert(FileNum, info);
     m_IsDowloadNow = true;
-    DowloadFile();
+    DownloadFile();
+}
+
+void MainWindow::SignalSendFile(uint32_t FileNum)
+{
+    m_TcpFile->send(FileNum);
+}
+
+void MainWindow::CloseFileNum(uint32_t FileNum)
+{
+    m_FileNumStoreMap.remove(FileNum);
+//    auto fit = m_FileNumStoreMap.find(FileNum);
+//    assert(fit != m_FileNumStoreMap.end());
+//    if(fit != m_FileNumStoreMap.end())
+//    {
+//        qDebug() << "close";
+//        (*fit)->close();
+//    }
+//    m_FileNumStoreMap.erase(fit);
+    auto it = m_DowloadFileMap.find(FileNum);
+    assert(it != m_DowloadFileMap.end());
+    if(it != m_DowloadFileMap.end())
+    {
+        if(it->FileCode == DOWNLOADUSERPROFILE)
+        {
+            emit ReadyChangeProfile(it->Id, QString("%1%2").arg(QString::fromStdString(it->LocalPath)).arg(QString::fromStdString(it->Name)));
+        }
+        m_DowloadFileMap.erase(it);
+    }
+    DownloadFile();
 }
 
 
@@ -580,6 +609,14 @@ void MainWindow::ReadySendProfile(MessagePtr m)
 
 }
 
+void MainWindow::SendFileNumDataContinue(MessagePtr m)
+{
+    qDebug() << __FUNCTION__;
+    json info = json::parse((char *)m->data());
+    uint32_t FileNum = info["FileNum"];
+    m_TcpFile->send(FileNum);
+}
+
 void MainWindow::DownloadFileData(MessagePtr m)
 {
     json info = json::parse((char *)m->data());
@@ -604,7 +641,7 @@ void MainWindow::DownloadFileData(MessagePtr m)
         m_DowloadFileMap.insert(FileNum, DowloadFileItem(FileNum, Id, Size, FileCode, Name, Path));
     }
     m_IsDowloadNow = true;
-    DowloadFile();
+    DownloadFile();
 }
 
 void MainWindow::DownloadFileEnd(MessagePtr m)
@@ -612,26 +649,7 @@ void MainWindow::DownloadFileEnd(MessagePtr m)
     qDebug() << __FUNCTION__;
     json info = json::parse((char *)m->data());
     uint32_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
-//    m_FileNumStoreMap.remove(FileNum);
-    auto fit = m_FileNumStoreMap.find(FileNum);
-    assert(fit != m_FileNumStoreMap.end());
-    if(fit != m_FileNumStoreMap.end())
-    {
-        qDebug() << "close";
-        (*fit)->close();
-    }
-    m_FileNumStoreMap.erase(fit);
-    auto it = m_DowloadFileMap.find(FileNum);
-    assert(it != m_DowloadFileMap.end());
-    if(it != m_DowloadFileMap.end())
-    {
-        if(it->FileCode == DOWNLOADUSERPROFILE)
-        {
-            emit ReadyChangeProfile(it->Id, QString("%1%2").arg(QString::fromStdString(it->LocalPath)).arg(QString::fromStdString(it->Name)));
-        }
-        m_DowloadFileMap.erase(it);
-    }
-    DowloadFile();
+    CloseFileNum(FileNum);
 }
 
 void MainWindow::SignalTest()
@@ -642,7 +660,7 @@ void MainWindow::SignalTest()
 
 //private
 
-void MainWindow::DowloadFile()
+void MainWindow::DownloadFile()
 {
     qDebug() << __FUNCTION__;
     if(m_IsDowloadNow)
@@ -657,16 +675,16 @@ void MainWindow::DowloadFile()
                 qDebug() << "FullName : " << FullName;
                 std::shared_ptr<QFile> file(new QFile(FullName));
                 file->open(QIODevice::WriteOnly | QIODevice::Truncate);
-                m_FileNumStoreMap.insert((*it).RemoteFileNum, file);
+                m_FileNumStoreMap.insert((*it).FileNum, file);
                 int FileCode = (*it).FileCode;
                 MessagePtr m;
                 if(FileCode == FILEDATATRANSFER)
                 {
-                    m = CreateResSendFileByFriend(m_UserId, (*it).Id, 0, (*it).LocalFileNum, (*it).RemoteFileNum);
+                    m = CreateResSendFileByFriend(m_UserId, (*it).Id, 0, (*it).SenderFileNum, (*it).FileNum);
                 }
                 else
                 {
-                    m = CreateDownloadFileDataMsg(m_UserId, 0, (*it).RemoteFileNum);
+                    m = CreateDownloadFileDataMsg(m_UserId, 0, (*it).FileNum);
                 }
                 SendtoRemote(s, m);
             }
@@ -734,6 +752,7 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERFILEENDACTION), std::bind(&MainWindow::DownloadFileEnd, this, std::placeholders::_1));
 
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADYPROFILETRANSER), std::bind(&MainWindow::ReadySendProfile, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESUPLOADDATACOUNTCODE), std::bind(&MainWindow::SendFileNumDataContinue, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADFILESOPENCODE), std::bind(&MainWindow::DownloadFileData, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADFILEENDCODE), std::bind(&MainWindow::DownloadFileEnd, this, std::placeholders::_1));
 }
@@ -1177,7 +1196,7 @@ void MainWindow::onGroupItemDoubleClick(QTreeWidgetItem *pitem, int col)
 
         CreateChatWindow(pitem->data(0, Qt::UserRole).value<uint32_t>());
     }
-//    GetFriendsProfile();
+    GetFriendsProfile();
 }
 
 void MainWindow::DelGroupItem(void *item)
@@ -1318,6 +1337,16 @@ void MainWindow::HandleRecvFileData(uint32_t FileNum, uint32_t Id, int FileCode,
 {
     qDebug() << __FUNCTION__;
     qDebug() << "FileNum : " << FileNum << " Id : " << Id << " FileCode : " << FileCode << " Size : " << Size;
+    MessagePtr m;
+    if(FileCode == FILEDATATRANSFER)
+    {
+        m = CreateFileTransferContinueMsg(m_UserId, Id, 0, FileNum);
+    }
+    else
+    {
+        m = CreateDownloadFileDataMsg(m_UserId, 0, FileNum);
+    }
+    SendtoRemote(s, m);
 }
 
 void MainWindow::ChangeProfile(uint32_t Id, QString FullPath)

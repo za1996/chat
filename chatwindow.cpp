@@ -111,6 +111,9 @@ void ChatWindow::Inithandle()
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERCHATDATAACTION), std::bind(&ChatWindow::RecvChatData, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERREQFILESENDACTION), std::bind(&ChatWindow::ResSendFile, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, RESTRANSFERFILEACTION), std::bind(&ChatWindow::SendFileOrClose, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERFILEENDACTION), std::bind(&ChatWindow::RecvFileEnd, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERFILECONTINUE), std::bind(&ChatWindow::SendFileCountinue, this, std::placeholders::_1));
+
 }
 
 // 虚函数
@@ -429,12 +432,11 @@ void ChatWindow::RecvChatData(MessagePtr m)
 void ChatWindow::ResSendFile(MessagePtr m)
 {
 
-    static uint32_t FileNum = 0xf0000000;
     json info = json::parse((char *)m->data());
     int Size = info["FileSize"].get<json::number_unsigned_t>();
     std::string Name = info["Name"].get<std::string>();
     DowloadFileItem item(FileNum++, m_FriendId, Size, FILEDATATRANSFER, Name, QString("%1/%2/%3").arg(CACHEPATH).arg(m_MeId).arg("recvfile/").toStdString(), info["SenderFileNum"]);
-    m_MainWin->AddDownloadFile(item.RemoteFileNum, item);
+    m_MainWin->AddDownloadFile(item.FileNum, item);
 }
 
 void ChatWindow::SendFileOrClose(MessagePtr m)
@@ -447,6 +449,20 @@ void ChatWindow::SendFileOrClose(MessagePtr m)
         m_MainWin->AddSendFile(info["FileNum"].get<json::number_unsigned_t>(), m_FriendId, FILEDATATRANSFER, it->absoluteFilePath().toStdString());
         m_ReadySendFile.erase(it);
     }
+}
+
+void ChatWindow::SendFileCountinue(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    uint32_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    m_MainWin->SignalSendFile(FileNum);
+}
+
+void ChatWindow::RecvFileEnd(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    uint32_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    m_MainWin->CloseFileNum(FileNum);
 }
 
 

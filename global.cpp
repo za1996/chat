@@ -20,7 +20,10 @@ QHash<uint32_t, std::string> m_ClientFileNumMap;
 QHash<uint32_t, std::string> m_RemoteFileNumMap;
 QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumStoreMap;
 QHash<uint32_t, DowloadFileItem> m_DowloadFileMap;
+QHash<uint32_t, SendFileItem> m_SendFileMap;
+QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumOpenSendMap;
 uint32_t m_ThisIsId;
+uint32_t FileNum = 0xf0000000;
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist)
 {
@@ -314,6 +317,16 @@ MessagePtr CreateFileDataTransferMsg(uint32_t srcID, uint32_t destId, uint32_t f
     m->setHead(srcID, destId, RESFILESENDETHREADRGROUP, TRANSFERFILEDATAACTION, flag);
     m->setTcpFileNum(FileNum);
     m->setData(buf, size);
+    return m;
+}
+
+MessagePtr CreateFileTransferContinueMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["FileNum"] = FileNum;
+    m->setHead(srcID, destId, TRANSFERDATAGROUP, TRANSFERFILECONTINUE, flag);
+    m->setData(info.dump());
     return m;
 }
 

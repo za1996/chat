@@ -36,6 +36,7 @@ MessagePtr CreateDownloadFileDataMsg(uint32_t srcID, uint32_t flag, uint32_t Fil
 MessagePtr CreateReadySendFileToFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t Size, const std::string &FileName, uint32_t LocalFileNum);
 MessagePtr CreateResSendFileByFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t LocalFileNum, uint32_t FileNum);
 MessagePtr CreateFileDataTransferMsg(uint32_t srcID, uint32_t destId, uint32_t flag, const char* buf, int size, uint32_t FileNum);
+MessagePtr CreateFileTransferContinueMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum);
 MessagePtr CreateFileTransferEndMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum);
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg);
 
@@ -53,7 +54,10 @@ extern QHash<uint32_t, std::string> m_ClientFileNumMap;
 extern QHash<uint32_t, std::string> m_RemoteFileNumMap;
 extern QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumStoreMap;
 extern QHash<uint32_t, DowloadFileItem> m_DowloadFileMap;
+extern QHash<uint32_t, SendFileItem> m_SendFileMap;
+extern QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumOpenSendMap;
 extern uint32_t m_ThisIsId;
+extern uint32_t FileNum;
 //#define UDP_MAX_SIZE 14336
 #define UDP_MAX_SIZE 1436
 #define UDP_MAX_DELAY 200

@@ -52,75 +52,14 @@ void TcpFileThread::run()
 //    {
 //        qDebug() << "send error";
 //    }
-    send();
+//    send();
+    connect(this, SIGNAL(ReadySend(uint32_t,uint32_t)), this, SLOT(RealSend(uint32_t,uint32_t)));
+    this->exec();
 }
 
-void TcpFileThread::send()
+void TcpFileThread::send(uint32_t FileNum)
 {
-    static char filebuffer[4096];
-    for(;true;)
-    {
-        QMutexLocker lock(m_mutex);
-        qDebug() << __FUNCTION__;
-        if(!m_FileQueue.size_approx())
-        {
-            qDebug() << "tcpthread sleep";
-            m_FileEmpty.wait(lock.mutex());
-            qDebug() << "tcpthread wake up";
-        }
-
-        SendFileItem item;
-        QFile file;
-        if(m_FileQueue.try_dequeue(item))
-        {
-            qDebug() << __FUNCTION__ << "ready open";
-            file.setFileName(QString::fromStdString(item.FileName));
-            file.open(QIODevice::ReadOnly);
-
-        }
-        else
-        {
-            continue;
-        }
-        uint64_t size = file.size();
-        qDebug() << __FUNCTION__ << "ready send";
-        if(size > 0xfffffff)
-        {
-
-        }
-        for(uint32_t sbyte = 0; sbyte < size; msleep(50))
-        {
-            int realbyte = file.read(filebuffer, 4096);
-            MessagePtr m;
-            if(item.FileCode == FILEDATATRANSFER)
-            {
-                m = CreateFileDataTransferMsg(m_UserId, item.Id, 0, filebuffer, realbyte, item.RemoteFileNum);
-            }
-            else
-            {
-                m = CreateFileDataUploadMsg(m_UserId, 0, filebuffer, realbyte, item.RemoteFileNum);
-            }
-            SendtoRemote(m);
-            sbyte += realbyte;
-
-        }
-        MessagePtr m;
-        if(item.FileCode == FILEDATATRANSFER)
-        {
-            m = CreateFileTransferEndMsg(m_UserId, item.Id, 0, item.RemoteFileNum);
-        }
-        else if(item.FileCode == UPLOADUSERPROFILE || item.FileCode == UPLOADUSERSGROUPPROFILE)
-        {
-            m = CreateSendProfileEndMsg(m_UserId, 0, item.RemoteFileNum);
-        }
-        else
-        {
-
-        }
-        SendtoRemote(m);
-        continue;
-
-    }
+    emit ReadySend(FileNum, 4096);
 }
 
 void TcpFileThread::read()
@@ -145,9 +84,13 @@ void TcpFileThread::read()
 
 void TcpFileThread::AddFile(uint32_t FileNum, uint32_t Id, int FileCode, std::string FileName)
 {
-    SendFileItem item(FileNum, Id, FileCode, FileName);
-    m_FileQueue.enqueue(item);
-    m_FileEmpty.notify_one();
+    std::shared_ptr<QFile> file(new QFile(QString::fromStdString(FileName)));
+    SendFileItem item(FileNum, Id, file->size(), FileCode, FileName);
+    m_SendFileMap.insert(FileNum, item);
+    file->open(QIODevice::ReadOnly);
+    qDebug() << " qfile size : " << file->size();
+    m_FileNumOpenSendMap.insert(FileNum, file);
+    send(FileNum);
 }
 
 bool TcpFileThread::SendtoRemote(MessagePtr m)
@@ -167,4 +110,53 @@ bool TcpFileThread::SendtoRemote(MessagePtr m)
 void TcpFileThread::SendSignal(uint32_t FileNum, uint32_t Id, int FileCode, int Size)
 {
     m_MainWin->EmitRecvFileData(FileNum, Id, FileCode, Size);
+}
+
+void TcpFileThread::RealSend(uint32_t FileNum, uint32_t Size)
+{
+    static char buffer[8192];
+    auto fit = m_FileNumOpenSendMap.find(FileNum);
+    auto sit = m_SendFileMap.find(FileNum);
+    assert(fit != m_FileNumOpenSendMap.end() && sit != m_SendFileMap.end());
+    if(fit != m_FileNumOpenSendMap.end() && sit != m_SendFileMap.end())
+    {
+        MessagePtr m;
+        if((*sit).NowLength >= (*sit).Length)
+        {
+            //发送完 发送完成包
+            int FileCode = (*sit).FileCode;
+            if(FileCode == FILEDATATRANSFER)
+            {
+                m = CreateFileTransferEndMsg(m_UserId, (*sit).Id, 0, (*sit).RemoteFileNum);
+            }
+            else if(FileCode == UPLOADUSERPROFILE || FileCode == UPLOADUSERSGROUPPROFILE)
+            {
+                m = CreateSendProfileEndMsg(m_UserId, 0, (*sit).RemoteFileNum);
+            }
+            else
+            {
+
+            }
+            SendtoRemote(m);
+        }
+        else
+        {
+            int realbyte = (*fit)->read(buffer, Size < 8192 ? Size : 8192);
+            if((*sit).FileCode == FILEDATATRANSFER)
+            {
+                m = CreateFileDataTransferMsg(m_UserId, (*sit).Id, 0, buffer, realbyte, FileNum);
+            }
+            else
+            {
+                m = CreateFileDataUploadMsg(m_UserId, 0, buffer, realbyte, FileNum);
+            }
+            SendtoRemote(m);
+            (*sit).NowLength += realbyte;
+        }
+    }
+    else
+    {
+        m_FileNumOpenSendMap.remove(FileNum);
+        m_SendFileMap.remove(FileNum);
+    }
 }

@@ -38,6 +38,8 @@ public:
 
     void AddSendFile(uint32_t FileNum, uint32_t Id, int FileCode, std::string FileName);
     void AddDownloadFile(uint32_t FileNum, const DowloadFileItem &info);
+    void SignalSendFile(uint32_t);
+    void CloseFileNum(uint32_t);
 
 private:
     enum {SPACESIZE = 10, PROFILESIZE = 80};
@@ -118,7 +120,7 @@ private:
     void DelChatWindow(uint32_t);
     void UdpSendToRemote(uint32_t FriendId, int PacketNum, const char *data, int size);
     QImage MatToQImage(cv::Mat &mtx);
-    void DowloadFile();
+    void DownloadFile();
 
 
     void ShowUserInfo(MessagePtr);
@@ -134,6 +136,7 @@ private:
     void ShowUsersGroupMemberList(MessagePtr);
     void DelGroupMemberSuccess(MessagePtr);
     void ReadySendProfile(MessagePtr m);
+    void SendFileNumDataContinue(MessagePtr);
     void DownloadFileData(MessagePtr);
     void DownloadFileEnd(MessagePtr);
 

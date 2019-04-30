@@ -59,6 +59,8 @@ private:
     void RecvChatData(MessagePtr);
     void ResSendFile(MessagePtr);
     void SendFileOrClose(MessagePtr);
+    void SendFileCountinue(MessagePtr);
+    void RecvFileEnd(MessagePtr);
 
 protected:
     void paintEvent(QPaintEvent *event);

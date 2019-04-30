@@ -88,15 +88,37 @@ void TcpFileThread::send()
         {
 
         }
-        for(uint32_t sbyte = 0; sbyte < size; msleep(40))
+        for(uint32_t sbyte = 0; sbyte < size; msleep(50))
         {
             int realbyte = file.read(filebuffer, 4096);
-            auto m = CreateFileDataUploadMsg(m_UserId, 0, filebuffer, realbyte, item.RemoteFileNum);
+            MessagePtr m;
+            if(item.FileCode == FILEDATATRANSFER)
+            {
+                m = CreateFileDataTransferMsg(m_UserId, item.Id, 0, filebuffer, realbyte, item.RemoteFileNum);
+            }
+            else
+            {
+                m = CreateFileDataUploadMsg(m_UserId, 0, filebuffer, realbyte, item.RemoteFileNum);
+            }
             SendtoRemote(m);
             sbyte += realbyte;
+
         }
-        auto m = CreateSendProfileEndMsg(m_UserId, 0, item.RemoteFileNum);
+        MessagePtr m;
+        if(item.FileCode == FILEDATATRANSFER)
+        {
+            m = CreateFileTransferEndMsg(m_UserId, item.Id, 0, item.RemoteFileNum);
+        }
+        else if(item.FileCode == UPLOADUSERPROFILE || item.FileCode == UPLOADUSERSGROUPPROFILE)
+        {
+            m = CreateSendProfileEndMsg(m_UserId, 0, item.RemoteFileNum);
+        }
+        else
+        {
+
+        }
         SendtoRemote(m);
+        continue;
 
     }
 }
@@ -121,9 +143,9 @@ void TcpFileThread::read()
     }
 }
 
-void TcpFileThread::AddFile(uint32_t FileNum, std::string FileName)
+void TcpFileThread::AddFile(uint32_t FileNum, uint32_t Id, int FileCode, std::string FileName)
 {
-    SendFileItem item(FileNum, FileName);
+    SendFileItem item(FileNum, Id, FileCode, FileName);
     m_FileQueue.enqueue(item);
     m_FileEmpty.notify_one();
 }

@@ -12,6 +12,7 @@ public:
     void SetUserId(uint32_t Id) { m_UserId = Id; }
     void run();
     void SendSignal(uint32_t FileNum, uint32_t Id, int FileCode, int Size);
+    void wait();
 
 private:
     uint32_t m_UserId;

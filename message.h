@@ -10,9 +10,11 @@
 struct SendFileItem
 {
     uint32_t RemoteFileNum;
+    uint32_t Id;
+    int FileCode;
     std::string FileName;
     SendFileItem() : RemoteFileNum(0) {}
-    SendFileItem(uint32_t FileNum, const std::string Name) : RemoteFileNum(FileNum), FileName(Name) {}
+    SendFileItem(uint32_t FileNum, uint32_t id, int code, const std::string Name) : RemoteFileNum(FileNum), Id(id), FileCode(code), FileName(Name) {}
 };
 
 struct DowloadFileItem
@@ -23,9 +25,12 @@ struct DowloadFileItem
     int FileCode;
     std::string Name;
     std::string LocalPath;
+    uint32_t LocalFileNum;
     DowloadFileItem() {}
     DowloadFileItem(uint32_t FileNum, uint32_t id, int length, int code, const std::string &name, const std::string &path) :
-        RemoteFileNum(FileNum), Id(id), Length(length), FileCode(code), Name(name), LocalPath(path) {}
+        RemoteFileNum(FileNum), Id(id), Length(length), FileCode(code), Name(name), LocalPath(path), LocalFileNum(0) {}
+    DowloadFileItem(uint32_t FileNum, uint32_t id, int length, int code, const std::string &name, const std::string &path, uint32_t LocalNum) :
+        RemoteFileNum(FileNum), Id(id), Length(length), FileCode(code), Name(name), LocalPath(path), LocalFileNum(LocalNum) {}
 };
 
 

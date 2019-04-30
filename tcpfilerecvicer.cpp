@@ -71,7 +71,4 @@ void TcpFileRecvicer::SendSignal(uint32_t FileNum, uint32_t Id, int FileCode, in
 {
     m_MainWin->EmitRecvFileData(FileNum, Id, FileCode, Size);
 }
-void TcpFileRecvicer::wait()
-{
 
-}

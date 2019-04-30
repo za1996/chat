@@ -10,6 +10,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
 #include <QTableWidget>
+#include <QFileInfo>
 #include "videowindow.h"
 #include "message.h"
 #include "titlebar.h"
@@ -45,6 +46,7 @@ private:
     QTimer m_ShowVideoTimer;
     AudioPlayer *m_AudioPlayer;
     bool m_EmotionWidgetShow;
+    QHash<uint32_t, QFileInfo> m_ReadySendFile;
 
     QHash<uint32_t, std::function<void(MessagePtr)>> m_HandleMap;
 
@@ -55,6 +57,8 @@ private:
 
     void ReqUdpChatMsgHandle(MessagePtr);
     void RecvChatData(MessagePtr);
+    void ResSendFile(MessagePtr);
+    void SendFileOrClose(MessagePtr);
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -70,6 +74,7 @@ private slots:
     void ShowEmotionWidget();
     void ChangeWordStyle();
     void AddEmotion(int, int);
+    void ReadySendFile();
 
 signals:
     void ChatWindowUdpChatEnd(uint32_t);

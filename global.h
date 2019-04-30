@@ -33,6 +33,10 @@ MessagePtr CreateReadySendProfileMsg(uint32_t srcID, uint32_t flag, uint32_t Cli
 MessagePtr CreateSendProfileEndMsg(uint32_t srcID, uint32_t flag, uint32_t FileNum);
 MessagePtr CreateReqDownloadProfile(uint32_t srcID, uint32_t flag, const json& info);
 MessagePtr CreateDownloadFileDataMsg(uint32_t srcID, uint32_t flag, uint32_t FileId);
+MessagePtr CreateReadySendFileToFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t Size, const std::string &FileName, uint32_t LocalFileNum);
+MessagePtr CreateResSendFileByFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t LocalFileNum, uint32_t FileNum);
+MessagePtr CreateFileDataTransferMsg(uint32_t srcID, uint32_t destId, uint32_t flag, const char* buf, int size, uint32_t FileNum);
+MessagePtr CreateFileTransferEndMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum);
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg);
 
 typedef std::shared_ptr<UdpPacket> UdpPacketPtr;

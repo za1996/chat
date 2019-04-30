@@ -3,6 +3,7 @@
 #include "global.h"
 #include "messagewidget.h"
 #include "chatwindowmessageitem.h"
+#include "mainwindow.h"
 
 #include <QPainter>
 #include <QPushButton>
@@ -12,6 +13,7 @@
 #include <tchar.h>
 #include <QRegExp>
 #include <nlohmann/json.hpp>
+#include <QFileDialog>
 using json = nlohmann::json;
 
 
@@ -87,6 +89,7 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, const QString &Name, QWid
     connect(ui->EmoticonButton, SIGNAL(clicked(bool)), this, SLOT(ShowEmotionWidget()));
     connect(ui->WordButton, SIGNAL(clicked(bool)), this, SLOT(ChangeWordStyle()));
     connect(m_EmotionWidget, SIGNAL(cellClicked(int,int)), this, SLOT(AddEmotion(int, int)));
+    connect(ui->FileButton, SIGNAL(clicked(bool)), this, SLOT(ReadySendFile()));
 
     Inithandle();
 }
@@ -106,6 +109,8 @@ void ChatWindow::Inithandle()
     m_HandleMap.insert(MESSAGETYPE(REQUDPEVENTGROUP, RESCLOSEUDPCHATCODE), std::bind(&ChatWindow::ReqUdpChatMsgHandle, this, std::placeholders::_1));
 
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERCHATDATAACTION), std::bind(&ChatWindow::RecvChatData, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERREQFILESENDACTION), std::bind(&ChatWindow::ResSendFile, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, RESTRANSFERFILEACTION), std::bind(&ChatWindow::SendFileOrClose, this, std::placeholders::_1));
 }
 
 // 虚函数
@@ -366,6 +371,21 @@ void ChatWindow::AddEmotion(int row, int col)
     m_EmotionWidget->hide();
 }
 
+void ChatWindow::ReadySendFile()
+{
+    static uint32_t LocalFileNum = 1;
+    QString FullPath = QFileDialog::getOpenFileName(this, tr("选择文件"), "C:");
+    if(!FullPath.isEmpty())
+    {
+        QFileInfo info(FullPath);
+        m_ReadySendFile.insert(LocalFileNum, info);
+        auto m = CreateReadySendFileToFriend(m_MeId, m_FriendId, 0, info.size(), info.fileName().toStdString(), LocalFileNum);
+        SendtoRemote(s, m);
+        qDebug() << "send readysendfile";
+        LocalFileNum++;
+    }
+}
+
 
 
 //消息处理函数
@@ -405,5 +425,30 @@ void ChatWindow::RecvChatData(MessagePtr m)
     ui->MsgList->setItemWidget(item, mItem);
     ui->MsgList->scrollToBottom();
 }
+
+void ChatWindow::ResSendFile(MessagePtr m)
+{
+
+    static uint32_t FileNum = 0xf0000000;
+    json info = json::parse((char *)m->data());
+    int Size = info["FileSize"].get<json::number_unsigned_t>();
+    std::string Name = info["Name"].get<std::string>();
+    DowloadFileItem item(FileNum++, m_FriendId, Size, FILEDATATRANSFER, Name, QString("%1/%2/%3").arg(CACHEPATH).arg(m_MeId).arg("recvfile/").toStdString(), info["SenderFileNum"]);
+    m_MainWin->AddDownloadFile(item.RemoteFileNum, item);
+}
+
+void ChatWindow::SendFileOrClose(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    uint32_t LocalNum = info["SenderFileNum"].get<json::number_unsigned_t>();
+    auto it = m_ReadySendFile.find(LocalNum);
+    if(it != m_ReadySendFile.end())
+    {
+        m_MainWin->AddSendFile(info["FileNum"].get<json::number_unsigned_t>(), m_FriendId, FILEDATATRANSFER, it->absoluteFilePath().toStdString());
+        m_ReadySendFile.erase(it);
+    }
+}
+
+
 
 

@@ -155,6 +155,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 //    connect(&m_UdpSocket, SIGNAL(readyRead()), this, SLOT(UdpRead()));
     connect(m_ShowFriendsGroupTreeButton, SIGNAL(clicked(bool)), this, SLOT(ShowFriendsGroupTree()));
     connect(m_ShowUsersGroupListButton, SIGNAL(clicked(bool)), this, SLOT(ShowUserGroupList()));
+    connect(this, SIGNAL(ReadyChangeProfile(uint32_t,QString)), this, SLOT(ChangeProfile(uint32_t,QString)));
     qDebug() << "TitleBar Height" << m_TitleBar->height() << endl;
 
 //    QTreeWidgetItem *pRootFriendItem = new QTreeWidgetItem();
@@ -203,6 +204,18 @@ MainWindow::~MainWindow()
 void MainWindow::EmitRecvFileData(uint32_t FileNum, uint32_t Id, int FileCode, int Size)
 {
     emit FileDataBlockRecv(FileNum, Id, FileCode, Size);
+}
+
+void MainWindow::AddSendFile(uint32_t FileNum, uint32_t Id, int FileCode, std::string FileName)
+{
+    m_TcpFile->AddFile(FileNum, Id, FileCode, FileName);
+}
+
+void MainWindow::AddDownloadFile(uint32_t FileNum, const DowloadFileItem &info)
+{
+    m_DowloadFileMap.insert(FileNum, info);
+    m_IsDowloadNow = true;
+    DowloadFile();
 }
 
 
@@ -554,12 +567,14 @@ void MainWindow::ReadySendProfile(MessagePtr m)
     json info = json::parse((char *)m->data());
     uint32_t ClientFileNum = info["ClientFileNum"].get<json::number_unsigned_t>();
     uint32_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    uint32_t Id = info["Id"].get<json::number_unsigned_t>();
+    int code = info["FileCode"].get<json::number_unsigned_t>();
     auto it = m_ClientFileNumMap.find(ClientFileNum);
     assert(it != m_ClientFileNumMap.end());
     if(it != m_ClientFileNumMap.end())
     {
         m_RemoteFileNumMap.insert(FileNum, *it);
-        m_TcpFile->AddFile(FileNum, *it);
+        m_TcpFile->AddFile(FileNum, Id, code, *it);
         m_ClientFileNumMap.erase(it);
     }
 
@@ -592,7 +607,32 @@ void MainWindow::DownloadFileData(MessagePtr m)
     DowloadFile();
 }
 
-
+void MainWindow::DownloadFileEnd(MessagePtr m)
+{
+    qDebug() << __FUNCTION__;
+    json info = json::parse((char *)m->data());
+    uint32_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+//    m_FileNumStoreMap.remove(FileNum);
+    auto fit = m_FileNumStoreMap.find(FileNum);
+    assert(fit != m_FileNumStoreMap.end());
+    if(fit != m_FileNumStoreMap.end())
+    {
+        qDebug() << "close";
+        (*fit)->close();
+    }
+    m_FileNumStoreMap.erase(fit);
+    auto it = m_DowloadFileMap.find(FileNum);
+    assert(it != m_DowloadFileMap.end());
+    if(it != m_DowloadFileMap.end())
+    {
+        if(it->FileCode == DOWNLOADUSERPROFILE)
+        {
+            emit ReadyChangeProfile(it->Id, QString("%1%2").arg(QString::fromStdString(it->LocalPath)).arg(QString::fromStdString(it->Name)));
+        }
+        m_DowloadFileMap.erase(it);
+    }
+    DowloadFile();
+}
 
 void MainWindow::SignalTest()
 {
@@ -618,17 +658,22 @@ void MainWindow::DowloadFile()
                 std::shared_ptr<QFile> file(new QFile(FullName));
                 file->open(QIODevice::WriteOnly | QIODevice::Truncate);
                 m_FileNumStoreMap.insert((*it).RemoteFileNum, file);
+                int FileCode = (*it).FileCode;
+                MessagePtr m;
+                if(FileCode == FILEDATATRANSFER)
+                {
+                    m = CreateResSendFileByFriend(m_UserId, (*it).Id, 0, (*it).LocalFileNum, (*it).RemoteFileNum);
+                }
+                else
+                {
+                    m = CreateDownloadFileDataMsg(m_UserId, 0, (*it).RemoteFileNum);
+                }
+                SendtoRemote(s, m);
             }
             else
             {
                 m_IsDowloadNow = false;
             }
-        }
-        if(m_FileNumStoreMap.size())
-        {
-            qDebug() << "FileNum" << *(m_FileNumStoreMap.keyBegin());
-            auto m = CreateDownloadFileDataMsg(m_UserId, 0, *(m_FileNumStoreMap.keyBegin()));
-            SendtoRemote(s, m);
         }
     }
 }
@@ -686,9 +731,11 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE), std::bind(&MainWindow::ReadyReadUdpData, this, std::placeholders::_1));
 
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERCHATDATAACTION), std::bind(&MainWindow::RecvChatData, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERFILEENDACTION), std::bind(&MainWindow::DownloadFileEnd, this, std::placeholders::_1));
 
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADYPROFILETRANSER), std::bind(&MainWindow::ReadySendProfile, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADFILESOPENCODE), std::bind(&MainWindow::DownloadFileData, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADFILEENDCODE), std::bind(&MainWindow::DownloadFileEnd, this, std::placeholders::_1));
 }
 
 
@@ -1035,6 +1082,8 @@ void MainWindow::InitDir()
     {
         QString path = QString("%1/%2/%3").arg("E:/University_Final_Text_Qt_Project/cache").arg(*it).arg("profile");
         CreateDir(path);
+        path = QString("%1/%2/%3").arg("E:/University_Final_Text_Qt_Project/cache").arg(*it).arg("recvfile");
+        CreateDir(path);
     }
 
     auto glist = m_UsersGroupMap.keys();
@@ -1128,7 +1177,7 @@ void MainWindow::onGroupItemDoubleClick(QTreeWidgetItem *pitem, int col)
 
         CreateChatWindow(pitem->data(0, Qt::UserRole).value<uint32_t>());
     }
-    GetFriendsProfile();
+//    GetFriendsProfile();
 }
 
 void MainWindow::DelGroupItem(void *item)
@@ -1269,7 +1318,15 @@ void MainWindow::HandleRecvFileData(uint32_t FileNum, uint32_t Id, int FileCode,
 {
     qDebug() << __FUNCTION__;
     qDebug() << "FileNum : " << FileNum << " Id : " << Id << " FileCode : " << FileCode << " Size : " << Size;
-    DowloadFile();
+}
+
+void MainWindow::ChangeProfile(uint32_t Id, QString FullPath)
+{
+    if(m_UserId == Id)
+    {
+        m_Me->setProfile(FullPath.split('/').last());
+        m_Profile->setPixmap(QPixmap::fromImage(QImage(FullPath)).scaled(m_Profile->size()));
+    }
 }
 
 //void MainWindow::UdpSend()

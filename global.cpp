@@ -285,6 +285,48 @@ MessagePtr CreateDownloadFileDataMsg(uint32_t srcID, uint32_t flag, uint32_t Fil
     return m;
 }
 
+MessagePtr CreateReadySendFileToFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t Size, const std::string &FileName, uint32_t LocalFileNum)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["SenderFileNum"] = LocalFileNum;
+    info["Name"] = FileName;
+    info["FileSize"] = Size;
+    m->setHead(srcID, destId, TRANSFERDATAGROUP, TRANSFERREQFILESENDACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateResSendFileByFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t LocalFileNum, uint32_t FileNum)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["SenderFileNum"] = LocalFileNum;
+    info["FileNum"] = FileNum;
+    m->setHead(srcID, destId, TRANSFERDATAGROUP, RESTRANSFERFILEACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateFileDataTransferMsg(uint32_t srcID, uint32_t destId, uint32_t flag, const char* buf, int size, uint32_t FileNum)
+{
+    auto m = Message::CreateObject();
+    m->setHead(srcID, destId, RESFILESENDETHREADRGROUP, TRANSFERFILEDATAACTION, flag);
+    m->setTcpFileNum(FileNum);
+    m->setData(buf, size);
+    return m;
+}
+
+MessagePtr CreateFileTransferEndMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["FileNum"] = FileNum;
+    m->setHead(srcID, destId, TRANSFERDATAGROUP, TRANSFERFILEENDACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg)
 {
     auto m = Message::CreateObject();

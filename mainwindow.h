@@ -36,6 +36,9 @@ public:
     void SignalTest();
     void EmitRecvFileData(uint32_t, uint32_t, int, int);
 
+    void AddSendFile(uint32_t FileNum, uint32_t Id, int FileCode, std::string FileName);
+    void AddDownloadFile(uint32_t FileNum, const DowloadFileItem &info);
+
 private:
     enum {SPACESIZE = 10, PROFILESIZE = 80};
     QTreeWidget *m_GroupTree;
@@ -132,6 +135,7 @@ private:
     void DelGroupMemberSuccess(MessagePtr);
     void ReadySendProfile(MessagePtr m);
     void DownloadFileData(MessagePtr);
+    void DownloadFileEnd(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -146,6 +150,7 @@ signals:
     void HasMessage(uint32_t, std::shared_ptr<Message>);
     void Test();
     void FileDataBlockRecv(uint32_t, uint32_t, int, int);
+    void ReadyChangeProfile(uint32_t, QString);
 
 private slots:
     void onGroupItemClick(QTreeWidgetItem *pitem, int col);
@@ -168,6 +173,7 @@ private slots:
     void ShowFriendsGroupTree();
     void ShowUserGroupList();
     void HandleRecvFileData(uint32_t, uint32_t, int, int);
+    void ChangeProfile(uint32_t, QString);
 };
 
 extern MainWindow *m_MainWin;

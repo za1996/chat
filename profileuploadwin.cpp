@@ -9,9 +9,10 @@
 #include "global.h"
 
 
-ProfileUploadWin::ProfileUploadWin(uint32_t id, QWidget *parent) :
+ProfileUploadWin::ProfileUploadWin(bool isGroup, uint32_t id, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::ProfileUploadWin),
+    m_isGroup(isGroup),
     m_Img(nullptr),
     m_UsersGroupId(id)
 {
@@ -92,7 +93,8 @@ void ProfileUploadWin::UploadImg()
         qDebug() << Name;
         qDebug() << path;
         img.save(path);
-        auto m = CreateReadySendProfileMsg(m_ThisIsId, 0, ClientFileNum, Name.toStdString(), UPLOADUSERSGROUPPROFILE, m_UsersGroupId);
+        uint32_t action = m_isGroup ? UPLOADUSERSGROUPPROFILE : UPLOADUSERPROFILE;
+        auto m = CreateReadySendProfileMsg(m_ThisIsId, 0, ClientFileNum, Name.toStdString(), action, m_UsersGroupId);
         SendtoRemote(s, m);
         m_ClientFileNumMap.insert(ClientFileNum, path.toStdString());
         this->close();

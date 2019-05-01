@@ -9,7 +9,7 @@ class GroupItem : public QWidget
 {
     Q_OBJECT
 public:
-    explicit GroupItem(QWidget *parent = nullptr, void *item = nullptr);
+    explicit GroupItem(QWidget *parent = nullptr, void *item = nullptr, uint32_t Id = 0);
     ~GroupItem();
 
     void setProfile(const QString &profile);

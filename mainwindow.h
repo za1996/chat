@@ -54,6 +54,7 @@ private:
     QWidget *m_MainBoard;
     QAction *m_addGroup;
     QAction *m_addUsersGroup;
+    QAction *m_addRemoteFriend;
     QPushButton *m_ShowFriendsGroupTreeButton;
     QPushButton *m_ShowUsersGroupListButton;
     DeleteUsersGroupMemberWin *m_DEUGMWindow;
@@ -69,6 +70,7 @@ private:
 
     QHash<uint32_t, QListWidgetItem *> m_UsersGroupMap;
     QHash<uint32_t, DeleteUsersGroupMemberWin*> m_DEUGMWindowMap;
+    QHash<uint32_t, std::list<MessagePtr>> m_ChatInfoCache;
 
 
     const uint32_t m_UserId;
@@ -97,6 +99,7 @@ private:
     Driection m_enDriection;
     int m_nDesktopWidth;
     bool m_IsDowloadNow;
+    QString m_Birthday;
 
 
     void GetFriendsProfile();
@@ -114,7 +117,7 @@ private:
     bool InitUserGroups();
     void InitDir();
     bool CreateDir(QString fullPath);
-    void AddUserGroup(QString &Name, uint32_t GroupID);
+    void AddUserGroup(const QString &Name, uint32_t GroupID);
     void InitHandle();
     void CreateChatWindow(uint32_t);
     void DelChatWindow(uint32_t);
@@ -139,6 +142,7 @@ private:
     void SendFileNumDataContinue(MessagePtr);
     void DownloadFileData(MessagePtr);
     void DownloadFileEnd(MessagePtr);
+    void AddNewUsersGroup(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -177,6 +181,8 @@ private slots:
     void ShowUserGroupList();
     void HandleRecvFileData(uint32_t, uint32_t, int, int);
     void ChangeProfile(uint32_t, QString);
+    void AddRemoteFriend();
+    void NewUsersGroup();
 };
 
 extern MainWindow *m_MainWin;

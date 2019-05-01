@@ -68,9 +68,16 @@ bool SendtoRemote(QTcpSocket &s, MessagePtr m)
 
 bool WaitForRead(QTcpSocket &s, std::list<MessagePtr> &mlist, const int count)
 {
-    while(s.waitForReadyRead())
+    while(s.size() > 0 || s.waitForReadyRead(10000))
     {
-        if(getMessage(s, count, mlist) <= 0) continue;
+        if(getMessage(s, count, mlist) <= 0)
+        {
+            if(!s.waitForReadyRead(10000))
+            {
+                break;
+            }
+            continue;
+        }
         else
         {
             return true;
@@ -336,6 +343,51 @@ MessagePtr CreateFileTransferEndMsg(uint32_t srcID, uint32_t destId, uint32_t fl
     json info;
     info["FileNum"] = FileNum;
     m->setHead(srcID, destId, TRANSFERDATAGROUP, TRANSFERFILEENDACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateAddRemoteFriendMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t UserId)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["UserId"] = UserId;
+    m->setHead(srcID, destId, TRANSFERDATAGROUP, ADDREMOTEFRIENDACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateChangeUsersGroupInfoMsg(uint32_t srcID, uint32_t flag, uint32_t UsersGroupId, const QString &Name, const QString &Desc)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["UsersGroupId"] = UsersGroupId;
+    info["UsersGroupName"] = Name.toStdString();
+    info["UsersGroupDesc"] = Desc.toStdString();
+    m->setHead(srcID, SERVERID, CHANGEINFOGROUP, CHANGEUSERSGROUPINFO, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateChangeMyselfInfoMsg(uint32_t srcID, uint32_t flag, const QString &Name, const QString &Desc, const QString &Birthday, int Sex)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["Name"] = Name.toStdString();
+    info["Desc"] = Desc.toStdString();
+    info["Birthday"] = Birthday.toStdString();
+    info["Sex"] = Sex;
+    m->setHead(srcID, SERVERID, CHANGEINFOGROUP, CHANGEMYSELFINFOACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateNewUsersGroupMsg(uint32_t srcID, uint32_t flag, const QString &GroupName)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["GroupName"] = GroupName.toStdString();
+    m->setHead(srcID, SERVERID, CHANGEINFOGROUP, CREATENEWUSERSGROUPACTION, flag);
     m->setData(info.dump());
     return m;
 }

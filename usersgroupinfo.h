@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "titlebar.h"
+#include "profileuploadwin.h"
 
 namespace Ui {
 class UsersGroupInfo;
@@ -24,6 +25,9 @@ private:
     Ui::UsersGroupInfo *ui;
     TitleBar *m_TitleBar;
     uint32_t m_GroupId;
+    ProfileUploadWin *m_ProfileWin;
+private slots:
+    void SendChangeUsersGroupInfo();
 };
 
 #endif // USERSGROUPINFO_H

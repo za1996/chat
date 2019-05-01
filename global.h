@@ -38,6 +38,10 @@ MessagePtr CreateResSendFileByFriend(uint32_t srcID, uint32_t destId, uint32_t f
 MessagePtr CreateFileDataTransferMsg(uint32_t srcID, uint32_t destId, uint32_t flag, const char* buf, int size, uint32_t FileNum);
 MessagePtr CreateFileTransferContinueMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum);
 MessagePtr CreateFileTransferEndMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum);
+MessagePtr CreateAddRemoteFriendMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t UserId);
+MessagePtr CreateChangeUsersGroupInfoMsg(uint32_t srcID, uint32_t flag, uint32_t UsersGroupId, const QString &Name, const QString &Desc);
+MessagePtr CreateChangeMyselfInfoMsg(uint32_t srcID, uint32_t flag, const QString &Name, const QString &Desc, const QString &Birthday, int Sex);
+MessagePtr CreateNewUsersGroupMsg(uint32_t srcID, uint32_t flag, const QString &GroupName);
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg);
 
 typedef std::shared_ptr<UdpPacket> UdpPacketPtr;

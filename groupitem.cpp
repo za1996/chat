@@ -6,7 +6,7 @@
 #include <QAction>
 #include <QDebug>
 
-GroupItem::GroupItem(QWidget *parent, void *item) : QWidget(parent)
+GroupItem::GroupItem(QWidget *parent, void *item, uint32_t Id) : QWidget(parent)
 {
     this->setMinimumSize(240, HEIGHT + 10);
     this->setMaximumHeight(HEIGHT + 10);
@@ -37,16 +37,19 @@ GroupItem::GroupItem(QWidget *parent, void *item) : QWidget(parent)
     m_showInfo = new QAction(tr("&查看资料"), this);
     m_deleteFriend = new QAction(tr("&删除好友"), this);
 
-    addAction(m_changeName);
-    addAction(m_changeGroup);
-    addAction(m_showInfo);
-    addAction(m_deleteFriend);
-    setContextMenuPolicy(Qt::ActionsContextMenu);
+    if(Id)
+    {
+        addAction(m_changeName);
+        addAction(m_changeGroup);
+        addAction(m_showInfo);
+        addAction(m_deleteFriend);
+        setContextMenuPolicy(Qt::ActionsContextMenu);
 
-    connect(m_changeName, SIGNAL(triggered(bool)), this, SLOT(changeName()));
-    connect(m_changeGroup, SIGNAL(triggered(bool)), this, SLOT(changeGroup()));
-    connect(m_showInfo, SIGNAL(triggered(bool)), this, SLOT(showInfo()));
-    connect(m_deleteFriend, SIGNAL(triggered(bool)), this, SLOT(deleteFriend()));
+        connect(m_changeName, SIGNAL(triggered(bool)), this, SLOT(changeName()));
+        connect(m_changeGroup, SIGNAL(triggered(bool)), this, SLOT(changeGroup()));
+        connect(m_showInfo, SIGNAL(triggered(bool)), this, SLOT(showInfo()));
+        connect(m_deleteFriend, SIGNAL(triggered(bool)), this, SLOT(deleteFriend()));
+    }
 }
 
 GroupItem::~GroupItem()
@@ -113,6 +116,16 @@ void GroupItem::setDate(const QString &date)
 
 void GroupItem::setMessageCount(const int count)
 {
+    QString text;
+    if(count > 99)
+    {
+        text = "99+";
+    }
+    else
+    {
+        text = QString("%1").arg(count);
+    }
+    m_MsgCount->setText(text);
     m_MsgCount->show();
 }
 

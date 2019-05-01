@@ -98,7 +98,9 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     m_GroupTree->verticalScrollBar()->setSingleStep(10);//获取滚动条并且设置每一步骤滚动10像素
     m_GroupTree->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_addGroup = new QAction(tr("&添加分组"), m_GroupTree);
+    m_addRemoteFriend = new QAction(tr("&添加好友"), m_GroupTree);
     m_GroupTree->addAction(m_addGroup);
+    m_GroupTree->addAction(m_addRemoteFriend);
     m_GroupTree->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     m_UsersGroupList->setStyleSheet("QListWidget{border-style:none;   }QListWidget::item{background-color:rgba(255,255,255,0%);}");
@@ -107,7 +109,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     m_UsersGroupList->verticalScrollBar()->setSingleStep(10);
     m_UsersGroupList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_UsersGroupList->hide();
-    m_addUsersGroup = new QAction(tr("&添加群组"), m_UsersGroupList);
+    m_addUsersGroup = new QAction(tr("&新建群组"), m_UsersGroupList);
     m_UsersGroupList->addAction(m_addUsersGroup);
     m_UsersGroupList->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -124,6 +126,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 
     m_Profile->resize(PROFILESIZE, PROFILESIZE);
     m_Profile->setObjectName("profile");
+    m_Profile->installEventFilter(this);
     QBitmap mask(m_Profile->size());
     QPainter painter(&mask);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -147,6 +150,8 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     connect(m_GroupTree, SIGNAL(itemClicked(QTreeWidgetItem*,int)), this, SLOT(onGroupItemClick(QTreeWidgetItem*,int)));
     connect(m_GroupTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)), this, SLOT(onGroupItemDoubleClick(QTreeWidgetItem*,int)));
     connect(m_addGroup, SIGNAL(triggered(bool)), this, SLOT(AddUserGroup()));
+    connect(m_addRemoteFriend, SIGNAL(triggered(bool)), this, SLOT(AddRemoteFriend()));
+    connect(m_addUsersGroup, SIGNAL(triggered(bool)), this, SLOT(NewUsersGroup()));
     connect(this, SIGNAL(FileDataBlockRecv(uint32_t, uint32_t, int, int)), this, SLOT(HandleRecvFileData(uint32_t, uint32_t, int, int)));
 //    connect(&m_ShowVideoTimer, SIGNAL(timeout()), this, SLOT(ShowVideo()));
 
@@ -171,14 +176,19 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 //    {
 //        AddGroupItem(pRootFriendItem);
 //    }
+    std::list<MessagePtr> Cache;
     qDebug() << "start thread";
     m_TcpFile = new TcpFileThread();
     m_TcpFile->SetUserId(m_UserId);
     m_TcpFile->start(QThread::HighPriority);
     qDebug() << "start m_TcpFile";
+    QThread::sleep(1);
+    WaitForRead(s, Cache, 1);
     m_TcpFileRecvicer = new TcpFileRecvicer();
     m_TcpFileRecvicer->SetUserId(m_UserId);
     m_TcpFileRecvicer->start(QThread::HighPriority);
+    QThread::sleep(1);
+    WaitForRead(s, Cache, 1);
     qDebug() << "start m_TcpFileRecvicer";
     InitHandle();
     GetRemoteInfo();
@@ -261,6 +271,23 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *ev)
         else if(ev->type() == QEvent::FocusIn)
         {
             qDebug("lineEdit FocusIn");
+        }
+    }
+    else if(obj == m_Profile)
+    {
+        if (ev->type() == QEvent::MouseButtonPress)//mouse button pressed
+        {
+            QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(ev);
+            if(mouseEvent->button() == Qt::LeftButton)
+            {
+                PersonalInfo *p = new PersonalInfo(nullptr, m_Me->getName(), m_UserId, m_Me->getSex(), m_Birthday.split(' ')[0], m_Me->getDesc(), m_Me->getProfile(), true);
+                p->show();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
     }
     return this->QWidget::eventFilter(obj, ev);
@@ -514,7 +541,20 @@ void MainWindow::ReadyReadUdpData(MessagePtr m)
 
 void MainWindow::RecvChatData(MessagePtr m)
 {
-
+    uint32_t FriendId = m->srcId();
+    auto it = m_ChatInfoCache.find(FriendId);
+    if(it != m_ChatInfoCache.end())
+    {
+        (*it).push_back(m);
+        auto item = m_FriendsItemMap.find(FriendId);
+        assert(item != m_FriendsItemMap.end());
+        if(item != m_FriendsItemMap.end())
+        {
+            auto FriendItem = dynamic_cast<GroupItem *>(m_GroupTree->itemWidget((*item), 0));
+            assert(FriendItem != nullptr);
+            FriendItem->setMessageCount((*it).size());
+        }
+    }
 }
 
 void MainWindow::DelUsersGroups(MessagePtr m)
@@ -532,6 +572,7 @@ void MainWindow::DelUsersGroups(MessagePtr m)
             if(it != m_UsersGroupMap.end())
             {
                 m_UsersGroupList->removeItemWidget(it.value());
+                delete it.value();
                 m_UsersGroupMap.erase(it);
             }
 
@@ -652,6 +693,15 @@ void MainWindow::DownloadFileEnd(MessagePtr m)
     CloseFileNum(FileNum);
 }
 
+void MainWindow::AddNewUsersGroup(MessagePtr m)
+{
+    qDebug() << __FUNCTION__;
+    json info = json::parse((char *)m->data());
+    uint32_t GroupId = info["GroupID"].get<json::number_unsigned_t>();
+    std::string GroupName = info["GroupName"].get<std::string>();
+    AddUsersGroupItem(GroupId, QString::fromStdString(GroupName), "", "", true);
+}
+
 void MainWindow::SignalTest()
 {
     qDebug() << __FUNCTION__;
@@ -744,6 +794,7 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESCHANGEFRIENDSGROUPCODE), std::bind(&MainWindow::ChangeFriendsGroup, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESDELUSERSGROUPSOKCODE), std::bind(&MainWindow::DelUsersGroups, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESDELMEMBERSUCCEESCODE), std::bind(&MainWindow::DelGroupMemberSuccess, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESCREATENEWUSERSGROUPCODE), std::bind(&MainWindow::AddNewUsersGroup, this, std::placeholders::_1));
 
     m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESSENDUDPENDPOINTCODE), std::bind(&MainWindow::AddUdpAddr, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE), std::bind(&MainWindow::ReadyReadUdpData, this, std::placeholders::_1));
@@ -845,7 +896,7 @@ void MainWindow::DelGroupItem(uint32_t Id, bool clear)
 void MainWindow::AddGroupItem(uint32_t GroupId, uint32_t Id, const QString &Name, const QString &OtherName, const QString &Desc, const QString &Profile, int Sex)
 {
     QTreeWidgetItem *pitem = new QTreeWidgetItem();
-    GroupItem *ptable = new GroupItem(nullptr, pitem);
+    GroupItem *ptable = new GroupItem(nullptr, pitem, Id);
     auto it = m_GroupIdMap->find(GroupId);
     const QString &GroupName = (*it)->getName();
     auto parentIt = m_GroupMap->find(GroupName);
@@ -876,7 +927,7 @@ void MainWindow::AddGroupItem(uint32_t GroupId, const GroupItemInfoPtr &info)
 }
 
 
-void MainWindow::AddUserGroup(QString &Name, uint32_t GroupID)
+void MainWindow::AddUserGroup(const QString &Name, uint32_t GroupID)
 {
     QTreeWidgetItem *pRootFriendItem = new QTreeWidgetItem();
     QLabel *pItemName = new QLabel(m_GroupTree);
@@ -982,6 +1033,7 @@ bool MainWindow::InitMySelf()
         QString Name = QString::fromStdString(info["Name"].get<std::string>());
         QString Desc = QString::fromStdString(info["Desc"].get<std::string>());
         QString Profile = QString::fromStdString(info["Profile"].get<std::string>());
+        m_Birthday = QString::fromStdString(info["Birthday"].get<std::string>());
         int Sex = info["Sex"].get<int>();
         m_Me = GroupItemInfo::CreateObject(Name, m_UserId, Desc, "", Profile, Sex, 0);
         m_UserName->setText(Name);
@@ -1003,6 +1055,7 @@ bool MainWindow::InitFriendsGroup()
         m = mlist.front();
         QDebug q = qDebug();
         m->operator <<(q);
+        AddUserGroup(QString("系统消息"), 0);
         json info = json::parse((char *)m->data());
         if(m->isError())
         {
@@ -1051,8 +1104,10 @@ bool MainWindow::InitFriends()
             uint32_t GroupId = Friends[i]["FriendGroupID"].get<json::number_unsigned_t>();
             int Sex = Friends[i]["Sex"].get<int>();
             AddGroupItem(GroupId, Id, Name, OtherName, Desc, Profile, Sex);
+            m_ChatInfoCache.insert(Id, std::list<MessagePtr>());
 
         }
+        AddGroupItem(0, 0, "系统消息", "", "", "", 0);
         return true;
     }
     return false;
@@ -1193,8 +1248,15 @@ void MainWindow::onGroupItemDoubleClick(QTreeWidgetItem *pitem, int col)
         item->hideMessageCountLabel();
         // open the chat
         // write code
+        uint32_t Id = pitem->data(0, Qt::UserRole).value<uint32_t>();
+        if(Id)
+        {
+            CreateChatWindow(Id);
+        }
+        else
+        {
 
-        CreateChatWindow(pitem->data(0, Qt::UserRole).value<uint32_t>());
+        }
     }
     GetFriendsProfile();
 }
@@ -1355,6 +1417,30 @@ void MainWindow::ChangeProfile(uint32_t Id, QString FullPath)
     {
         m_Me->setProfile(FullPath.split('/').last());
         m_Profile->setPixmap(QPixmap::fromImage(QImage(FullPath)).scaled(m_Profile->size()));
+    }
+}
+
+void MainWindow::AddRemoteFriend()
+{
+    bool isOK;
+    uint32_t Id = QInputDialog::getInt(this, "Input", "输入用户账号", 0, 0, 2147483647, 1, &isOK);
+    if(isOK)
+    {
+        auto m = CreateAddRemoteFriendMsg(m_UserId, Id, 0, m_UserId);
+        SendtoRemote(s, m);
+        QMessageBox message(QMessageBox::NoIcon, "message", tr("请求"));
+        message.exec();
+    }
+}
+
+void MainWindow::NewUsersGroup()
+{
+    bool isOK;
+    QString text = QInputDialog::getText(this, "Input", "请输入群组名", QLineEdit::Normal, "我的群组", &isOK);
+    if(isOK)
+    {
+        auto m = CreateNewUsersGroupMsg(m_UserId, 0, text);
+        SendtoRemote(s, m);
     }
 }
 

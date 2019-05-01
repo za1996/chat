@@ -4,6 +4,7 @@
 #include <QWidget>
 
 #include <titlebar.h>
+#include "profileuploadwin.h"
 
 namespace Ui {
 class PersonalInfo;
@@ -19,12 +20,16 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event);
+    bool eventFilter(QObject *watched, QEvent *event);
 
 
 private:
     Ui::PersonalInfo *ui;
 
     TitleBar *m_TitleBar;
+    ProfileUploadWin *m_ProfileWin;
+private slots:
+    void ChangeMyselfInfo();
 };
 
 #endif // PERSONALINFO_H

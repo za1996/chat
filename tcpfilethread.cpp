@@ -33,7 +33,6 @@ void TcpFileThread::run()
     if(m_UserId)
     {
         qDebug() << "ready send merge";
-        sleep(1);
         auto m = CreateSocketMergeMsg(0, m_UserId, 1);
         if(!SendtoRemote(m))
         {

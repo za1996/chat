@@ -1,6 +1,7 @@
 #include "usersgroupinfo.h"
 #include "ui_usersgroupinfo.h"
 #include "profileuploadwin.h"
+#include "global.h"
 #include <QPainter>
 #include <QtCore/qmath.h>
 #include <QMouseEvent>
@@ -8,7 +9,8 @@
 UsersGroupInfo::UsersGroupInfo(QWidget *parent, const QString& Name, uint32_t id, const QString& Desc, const QString& Profile, bool Editable) :
     QWidget(parent),
     ui(new Ui::UsersGroupInfo),
-    m_GroupId(id)
+    m_GroupId(id),
+    m_ProfileWin(nullptr)
 {
     ui->setupUi(this);
 
@@ -40,6 +42,7 @@ UsersGroupInfo::UsersGroupInfo(QWidget *parent, const QString& Name, uint32_t id
     }
     connect(ui->CloseButton, SIGNAL(clicked(bool)), this, SLOT(close()));
     connect(m_TitleBar, SIGNAL(signalButtonCloseClicked()), this, SLOT(close()));
+    connect(ui->SaveButton, SIGNAL(clicked(bool)), this, SLOT(SendChangeUsersGroupInfo()));
 }
 
 UsersGroupInfo::~UsersGroupInfo()
@@ -78,8 +81,8 @@ bool UsersGroupInfo::eventFilter(QObject *watched, QEvent *event)
             QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
             if(mouseEvent->button() == Qt::LeftButton)
             {
-                ProfileUploadWin *w = new ProfileUploadWin(m_GroupId);
-                w->show();
+                m_ProfileWin = new ProfileUploadWin(true, m_GroupId);
+                m_ProfileWin->show();
                 return true;
             }
             else
@@ -88,4 +91,10 @@ bool UsersGroupInfo::eventFilter(QObject *watched, QEvent *event)
             }
         }
     }
+}
+
+void UsersGroupInfo::SendChangeUsersGroupInfo()
+{
+    auto m = CreateChangeUsersGroupInfoMsg(m_ThisIsId, 0, m_GroupId, ui->NameLineEdit->text(), ui->DescTextEdit->toPlainText());
+    SendtoRemote(s, m);
 }

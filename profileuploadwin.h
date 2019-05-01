@@ -16,7 +16,7 @@ class ProfileUploadWin : public QWidget
     Q_OBJECT
 
 public:
-    explicit ProfileUploadWin(uint32_t id, QWidget *parent = 0);
+    explicit ProfileUploadWin(bool isGroup, uint32_t id, QWidget *parent = 0);
     ~ProfileUploadWin();
 
 private:
@@ -26,6 +26,7 @@ private:
     QLabel *m_Label;
     QString m_File;
     uint32_t m_UsersGroupId;
+    bool m_isGroup;
 
 protected:
     void paintEvent(QPaintEvent *event);

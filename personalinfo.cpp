@@ -1,5 +1,6 @@
 #include "personalinfo.h"
 #include "ui_personalinfo.h"
+#include "global.h"
 
 #include <QDebug>
 #include <QPainter>
@@ -27,10 +28,24 @@ PersonalInfo::PersonalInfo(QWidget *parent, const QString &Name, uint32_t id, in
     m_TitleBar->setMargins(5, 0, 0, 0);
     m_TitleBar->loadStyleSheet("D:/titlebarstyle.css");
 
+    QStringList strList;
+    strList << QString("man") << QString("girl");
+    ui->SexComboBox->addItems(strList);
+
+    ui->Profile->installEventFilter(this);
+
     ui->NameLineEdit->setText(Name);
     ui->NumLabel->setText(QString::number(id));
     ui->DescPlainTextEdit->setPlainText(Desc);
     ui->BirthdayDateEdit->setDate(QDate::fromString(Date, "yyyy-MM-dd"));
+    if(!Sex)
+    {
+        ui->SexComboBox->setCurrentIndex(0);
+    }
+    else
+    {
+        ui->SexComboBox->setCurrentIndex(1);
+    }
 
     if(!Editable)
     {
@@ -43,6 +58,7 @@ PersonalInfo::PersonalInfo(QWidget *parent, const QString &Name, uint32_t id, in
 
     connect(ui->CloseButton, SIGNAL(clicked(bool)), this, SLOT(close()));
     connect(m_TitleBar, SIGNAL(signalButtonCloseClicked()), this, SLOT(close()));
+    connect(ui->SaveButton, SIGNAL(clicked(bool)), this, SLOT(ChangeMyselfInfo()));
 
 }
 
@@ -72,4 +88,36 @@ void PersonalInfo::paintEvent(QPaintEvent *event)
         painter.drawPath(path);
     }
     this->QWidget::paintEvent(event);
+}
+
+void PersonalInfo::ChangeMyselfInfo()
+{
+    QString Birthday = ui->BirthdayDateEdit->dateTime().toString("yyyy/MM/dd HH:mm:ss");
+    QString Name = ui->NameLineEdit->text();
+    QString Desc = ui->DescPlainTextEdit->toPlainText();
+    int Sex = ui->SexComboBox->currentIndex() % 2;
+    qDebug() << Birthday << " " << Sex;
+    auto m = CreateChangeMyselfInfoMsg(m_ThisIsId, 0, Name, Desc, Birthday, Sex);
+    SendtoRemote(s, m);
+}
+
+bool PersonalInfo::eventFilter(QObject *watched, QEvent *event)
+{
+    if(watched == ui->Profile)
+    {
+        if (event->type() == QEvent::MouseButtonPress)//mouse button pressed
+        {
+            QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+            if(mouseEvent->button() == Qt::LeftButton)
+            {
+                m_ProfileWin = new ProfileUploadWin(false, m_ThisIsId);
+                m_ProfileWin->show();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
 }

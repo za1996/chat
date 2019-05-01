@@ -1,7 +1,7 @@
 #include "messagewidget.h"
 #include <QDebug>
 
-MessageWidget::MessageWidget(QWidget *parent) :
+MessageWidget::MessageWidget(int width, QWidget *parent) :
     QTextEdit(parent),
     m_oldWidth(0)
 {
@@ -10,7 +10,7 @@ MessageWidget::MessageWidget(QWidget *parent) :
     this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->setWindowFlags(Qt::FramelessWindowHint);
-    this->resize(20, 20);
+    this->resize(20, width);
     this->setReadOnly(true);
     this->setStyleSheet("background:transparent;border-width:0;border-style:outset");
 }
@@ -61,7 +61,6 @@ void MessageWidget::SetText(const QString &text)
     this->insertHtml(text);
     m_HasText = true;
     this->show();
-    SetWidth(100);
 }
 
 void MessageWidget::SetWidth(int width)

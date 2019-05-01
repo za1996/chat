@@ -8,7 +8,7 @@ class MessageWidget : public QTextEdit
 {
     Q_OBJECT
 public:
-    MessageWidget(QWidget *parent = nullptr);
+    MessageWidget(int width, QWidget *parent = nullptr);
     void SetText(const QString &text);
 
     void SetWidth(int width);

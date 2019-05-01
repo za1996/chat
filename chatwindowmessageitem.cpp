@@ -6,7 +6,7 @@
 
 ChatWindowMessageItem::ChatWindowMessageItem(QWidget *parent, bool isMe, uint64_t time, const QString &text, int width) :
     QWidget(parent),
-    m_MsgWidget(this),
+    m_MsgWidget(width, this),
     m_TimerLabel(this),
     m_IsMe(isMe),
     ui(new Ui::ChatWindowMessageItem)

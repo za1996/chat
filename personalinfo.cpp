@@ -120,4 +120,5 @@ bool PersonalInfo::eventFilter(QObject *watched, QEvent *event)
             }
         }
     }
+    this->QWidget::eventFilter(watched, event);
 }

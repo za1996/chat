@@ -20,7 +20,7 @@ FileWidgetItem::~FileWidgetItem()
 void FileWidgetItem::SetFileName(const QString &FileName)
 {
     QString Name = FileName;
-    QFontMetrics fontWidth(ui->FileName->font());
+    QFontMetrics fontWidth(ui->ProgressBar->font());
     int width = fontWidth.width(Name);
     int max = ui->ProgressBar->width() - ui->DownloadButton->width() - ui->CancelButton->width();
     if(width >= max)  //当字符串宽度大于最大宽度时进行转换

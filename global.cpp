@@ -22,6 +22,7 @@ QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumStoreMap;
 QHash<uint32_t, DowloadFileItem> m_DowloadFileMap;
 QHash<uint32_t, SendFileItem> m_SendFileMap;
 QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumOpenSendMap;
+QVector<SysMsgCacheItem> m_SysMsgCache;
 uint32_t m_ThisIsId;
 uint32_t FileNum = 0xf0000000;
 
@@ -347,11 +348,12 @@ MessagePtr CreateFileTransferEndMsg(uint32_t srcID, uint32_t destId, uint32_t fl
     return m;
 }
 
-MessagePtr CreateAddRemoteFriendMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t UserId)
+MessagePtr CreateAddRemoteFriendMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t UserId, const QString& Name)
 {
     auto m = Message::CreateObject();
     json info;
     info["UserId"] = UserId;
+    info["UserName"] = Name.toStdString();
     m->setHead(srcID, destId, TRANSFERDATAGROUP, ADDREMOTEFRIENDACTION, flag);
     m->setData(info.dump());
     return m;
@@ -388,6 +390,40 @@ MessagePtr CreateNewUsersGroupMsg(uint32_t srcID, uint32_t flag, const QString &
     json info;
     info["GroupName"] = GroupName.toStdString();
     m->setHead(srcID, SERVERID, CHANGEINFOGROUP, CREATENEWUSERSGROUPACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateRealAddFriendMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t FriendId)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["FriendId"] = FriendId;
+    info["UserId"] = UserId;
+    m->setHead(srcID, SERVERID, CHANGEINFOGROUP, REQREALADDFRIENDACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateReqJoinInOtherGroupMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t GroupId, const QString &UserName)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["GroupId"] = GroupId;
+    info["UserId"] = UserId;
+    info["UserName"] = UserName.toStdString();
+    m->setHead(srcID, SERVERID, TRANSFERDATAGROUP, REQJOININGROUPACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateAddMemberToGroupMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t GroupId)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["GroupId"] = GroupId;
+    info["UserId"] = UserId;
+    m->setHead(srcID, SERVERID, CHANGEINFOGROUP, ADDMEMBERTOUSERSGROUP, flag);
     m->setData(info.dump());
     return m;
 }

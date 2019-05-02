@@ -6,6 +6,19 @@
 #include <QDebug>
 #include "messagetype.h"
 
+class Message;
+typedef std::shared_ptr<Message> MessagePtr;
+struct SysMsgCacheItem
+{
+    bool OnlyShow;
+    bool Finish;
+    bool isOK;
+    MessagePtr m;
+    SysMsgCacheItem() : OnlyShow(true), Finish(true), isOK(true) {}
+
+    SysMsgCacheItem(bool onlyshow, bool finish, bool ok, const MessagePtr& msg) :
+        OnlyShow(onlyshow), Finish(finish), isOK(ok), m(msg) {}
+};
 
 struct SendFileItem
 {
@@ -113,6 +126,5 @@ private:
     int m_dataSize;
 };
 
-typedef std::shared_ptr<Message> MessagePtr;
 
 #endif // MESSAGE_H

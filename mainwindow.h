@@ -55,6 +55,7 @@ private:
     QAction *m_addGroup;
     QAction *m_addUsersGroup;
     QAction *m_addRemoteFriend;
+    QAction *m_joinInOtherUsersGroup;
     QPushButton *m_ShowFriendsGroupTreeButton;
     QPushButton *m_ShowUsersGroupListButton;
     DeleteUsersGroupMemberWin *m_DEUGMWindow;
@@ -71,6 +72,7 @@ private:
     QHash<uint32_t, QListWidgetItem *> m_UsersGroupMap;
     QHash<uint32_t, DeleteUsersGroupMemberWin*> m_DEUGMWindowMap;
     QHash<uint32_t, std::list<MessagePtr>> m_ChatInfoCache;
+
 
 
     const uint32_t m_UserId;
@@ -143,6 +145,10 @@ private:
     void DownloadFileData(MessagePtr);
     void DownloadFileEnd(MessagePtr);
     void AddNewUsersGroup(MessagePtr);
+    void ReqAddFriendMsg(MessagePtr);
+    void AddTheNewFriend(MessagePtr);
+    void RemoteUserReqJoinInGroup(MessagePtr);
+    void AddRemoteNewUsersGroup(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -183,6 +189,7 @@ private slots:
     void ChangeProfile(uint32_t, QString);
     void AddRemoteFriend();
     void NewUsersGroup();
+    void WantToJoinInOtherGroup();
 };
 
 extern MainWindow *m_MainWin;

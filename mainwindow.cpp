@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 #include "groupiteminfo.h"
 #include "usersgroupinfo.h"
+#include "systemmessagewin.h"
 #include <functional>
 #include <iostream>
 
@@ -110,7 +111,9 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     m_UsersGroupList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_UsersGroupList->hide();
     m_addUsersGroup = new QAction(tr("&新建群组"), m_UsersGroupList);
+    m_joinInOtherUsersGroup = new QAction(tr("&加入群组"), m_UsersGroupList);
     m_UsersGroupList->addAction(m_addUsersGroup);
+    m_UsersGroupList->addAction(m_joinInOtherUsersGroup);
     m_UsersGroupList->setContextMenuPolicy(Qt::ActionsContextMenu);
 
 
@@ -152,6 +155,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     connect(m_addGroup, SIGNAL(triggered(bool)), this, SLOT(AddUserGroup()));
     connect(m_addRemoteFriend, SIGNAL(triggered(bool)), this, SLOT(AddRemoteFriend()));
     connect(m_addUsersGroup, SIGNAL(triggered(bool)), this, SLOT(NewUsersGroup()));
+    connect(m_joinInOtherUsersGroup, SIGNAL(triggered(bool)), this, SLOT(WantToJoinInOtherGroup()));
     connect(this, SIGNAL(FileDataBlockRecv(uint32_t, uint32_t, int, int)), this, SLOT(HandleRecvFileData(uint32_t, uint32_t, int, int)));
 //    connect(&m_ShowVideoTimer, SIGNAL(timeout()), this, SLOT(ShowVideo()));
 
@@ -702,6 +706,78 @@ void MainWindow::AddNewUsersGroup(MessagePtr m)
     AddUsersGroupItem(GroupId, QString::fromStdString(GroupName), "", "", true);
 }
 
+void MainWindow::ReqAddFriendMsg(MessagePtr m)
+{
+    SysMsgCacheItem sysitem(false, false, true, m);
+    m_SysMsgCache.push_back(sysitem);
+    auto item = m_FriendsItemMap.find(0);
+    assert(item != m_FriendsItemMap.end());
+    if(item != m_FriendsItemMap.end())
+    {
+        GroupItem *p = dynamic_cast<GroupItem *>(m_GroupTree->itemWidget(*item, 0));
+        assert(p != nullptr);
+        if(p != nullptr)
+        {
+            p->setMessageCount(1);
+        }
+    }
+
+
+}
+
+void MainWindow::AddTheNewFriend(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    uint32_t FriendId = info["ID"].get<json::number_unsigned_t>();
+    uint32_t GroupId = info["GroupId"].get<json::number_unsigned_t>();
+    QString FriendName = QString::fromStdString(info["Name"].get<std::string>());
+    QString FriendProfile = QString::fromStdString(info["Name"].get<std::string>());
+    QString FriendDesc = QString::fromStdString(info["Desc"].get<std::string>());
+    int Sex = info["Sex"].get<int>();
+
+    QString path = QString("%1/%2/%3").arg(CACHEPATH).arg(FriendId).arg("profile");
+    CreateDir(path);
+    path = QString("%1/%2/%3").arg(CACHEPATH).arg(FriendId).arg("recvfile");
+    CreateDir(path);
+
+    AddGroupItem(GroupId, FriendId, FriendName, "", FriendDesc, FriendProfile, Sex);
+
+    //请求头像
+}
+
+void MainWindow::RemoteUserReqJoinInGroup(MessagePtr m)
+{
+    SysMsgCacheItem sysitem(false, false, true, m);
+    m_SysMsgCache.push_back(sysitem);
+    auto item = m_FriendsItemMap.find(0);
+    assert(item != m_FriendsItemMap.end());
+    if(item != m_FriendsItemMap.end())
+    {
+        GroupItem *p = dynamic_cast<GroupItem *>(m_GroupTree->itemWidget(*item, 0));
+        assert(p != nullptr);
+        if(p != nullptr)
+        {
+            p->setMessageCount(1);
+        }
+    }
+}
+
+void MainWindow::AddRemoteNewUsersGroup(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    uint32_t GroupId = info["GroupId"].get<json::number_unsigned_t>();
+    QString GroupName = QString::fromStdString(info["GroupName"].get<std::string>());
+    QString GroupDesc = QString::fromStdString(info["GroupDesc"].get<std::string>());
+    QString GroupProfile = QString::fromStdString(info["GroupProfile"].get<std::string>());
+    uint32_t AdminId = info["AdminId"].get<json::number_unsigned_t>();
+
+    QString path = QString("%1/%2/%3/%4").arg(CACHEPATH).arg("groups").arg(GroupId).arg("profile");
+    CreateDir(path);
+    AddUsersGroupItem(GroupId, GroupName, GroupDesc, GroupProfile, AdminId == m_UserId);
+
+    //更新头像
+}
+
 void MainWindow::SignalTest()
 {
     qDebug() << __FUNCTION__;
@@ -795,12 +871,16 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESDELUSERSGROUPSOKCODE), std::bind(&MainWindow::DelUsersGroups, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESDELMEMBERSUCCEESCODE), std::bind(&MainWindow::DelGroupMemberSuccess, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESCREATENEWUSERSGROUPCODE), std::bind(&MainWindow::AddNewUsersGroup, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESREALADDFRIENDCODE), std::bind(&MainWindow::AddTheNewFriend, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESADDMEMBERTOGROUPCODE), std::bind(&MainWindow::AddRemoteNewUsersGroup, this, std::placeholders::_1));
 
     m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESSENDUDPENDPOINTCODE), std::bind(&MainWindow::AddUdpAddr, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESUDPREQGROUP, RESREADYUDPCHATSENDCODE), std::bind(&MainWindow::ReadyReadUdpData, this, std::placeholders::_1));
 
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERCHATDATAACTION), std::bind(&MainWindow::RecvChatData, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERFILEENDACTION), std::bind(&MainWindow::DownloadFileEnd, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, ADDREMOTEFRIENDACTION), std::bind(&MainWindow::ReqAddFriendMsg, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, REQJOININGROUPACTION), std::bind(&MainWindow::RemoteUserReqJoinInGroup, this, std::placeholders::_1));
 
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADYPROFILETRANSER), std::bind(&MainWindow::ReadySendProfile, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESUPLOADDATACOUNTCODE), std::bind(&MainWindow::SendFileNumDataContinue, this, std::placeholders::_1));
@@ -971,7 +1051,7 @@ void MainWindow::GetRemoteInfo()
         qDebug() << "connect";
         connect(this, SIGNAL(HasMessage(uint32_t,std::shared_ptr<Message>)), this, SLOT(HandleMessage(uint32_t,std::shared_ptr<Message>)));
         connect(&s, SIGNAL(readyRead()), this, SLOT(MessageRead()));
-
+        GetFriendsProfile();
         return;
     }
 error:
@@ -1103,6 +1183,7 @@ bool MainWindow::InitFriends()
             uint32_t Id = Friends[i]["FriendID"].get<json::number_unsigned_t>();
             uint32_t GroupId = Friends[i]["FriendGroupID"].get<json::number_unsigned_t>();
             int Sex = Friends[i]["Sex"].get<int>();
+            qDebug() << GroupId << " " << Id << " " << Name << " " << OtherName << " " << Desc << " " << Profile << " " << Sex;
             AddGroupItem(GroupId, Id, Name, OtherName, Desc, Profile, Sex);
             m_ChatInfoCache.insert(Id, std::list<MessagePtr>());
 
@@ -1154,16 +1235,16 @@ void MainWindow::InitDir()
     auto ulist = m_FriendsMap->keys();
     for(auto it = ulist.begin(); it != ulist.end(); ++it)
     {
-        QString path = QString("%1/%2/%3").arg("E:/University_Final_Text_Qt_Project/cache").arg(*it).arg("profile");
+        QString path = QString("%1/%2/%3").arg(CACHEPATH).arg(*it).arg("profile");
         CreateDir(path);
-        path = QString("%1/%2/%3").arg("E:/University_Final_Text_Qt_Project/cache").arg(*it).arg("recvfile");
+        path = QString("%1/%2/%3").arg(CACHEPATH).arg(*it).arg("recvfile");
         CreateDir(path);
     }
 
     auto glist = m_UsersGroupMap.keys();
     for(auto it = glist.begin(); it != glist.end(); ++it)
     {
-        QString path = QString("%1/%2/%3/%4").arg("E:/University_Final_Text_Qt_Project/cache").arg("groups").arg(*it).arg("profile");
+        QString path = QString("%1/%2/%3/%4").arg(CACHEPATH).arg("groups").arg(*it).arg("profile");
         CreateDir(path);
     }
 }
@@ -1255,10 +1336,10 @@ void MainWindow::onGroupItemDoubleClick(QTreeWidgetItem *pitem, int col)
         }
         else
         {
-
+            SystemMessageWin *w = new SystemMessageWin();
+            w->show();
         }
     }
-    GetFriendsProfile();
 }
 
 void MainWindow::DelGroupItem(void *item)
@@ -1426,10 +1507,10 @@ void MainWindow::AddRemoteFriend()
     uint32_t Id = QInputDialog::getInt(this, "Input", "输入用户账号", 0, 0, 2147483647, 1, &isOK);
     if(isOK)
     {
-        auto m = CreateAddRemoteFriendMsg(m_UserId, Id, 0, m_UserId);
+        auto m = CreateAddRemoteFriendMsg(m_UserId, Id, 0, m_UserId, m_Me->getName());
         SendtoRemote(s, m);
-        QMessageBox message(QMessageBox::NoIcon, "message", tr("请求"));
-        message.exec();
+        QMessageBox message(QMessageBox::NoIcon, "message", tr("申请好友请求"));
+        message.open();
     }
 }
 
@@ -1441,6 +1522,19 @@ void MainWindow::NewUsersGroup()
     {
         auto m = CreateNewUsersGroupMsg(m_UserId, 0, text);
         SendtoRemote(s, m);
+    }
+}
+
+void MainWindow::WantToJoinInOtherGroup()
+{
+    bool isOK;
+    uint32_t GroupId = QInputDialog::getInt(this, "Input", "输入群组ID", 0, 0, 2147483647, 1, &isOK);
+    if(isOK)
+    {
+        auto m = CreateReqJoinInOtherGroupMsg(m_UserId, 0, m_UserId, GroupId, m_Me->getName());
+        SendtoRemote(s, m);
+        QMessageBox message(QMessageBox::NoIcon, "message", tr("申请群组请求"));
+        message.open();
     }
 }
 

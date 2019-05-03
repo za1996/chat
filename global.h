@@ -45,6 +45,7 @@ MessagePtr CreateNewUsersGroupMsg(uint32_t srcID, uint32_t flag, const QString &
 MessagePtr CreateRealAddFriendMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t FriendId);
 MessagePtr CreateReqJoinInOtherGroupMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t GroupId, const QString &UserName);
 MessagePtr CreateAddMemberToGroupMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t GroupId);
+MessagePtr CreateRegisterAccountMsg(uint32_t flag, const QString &Name, const QString &Password, const QString &Answer);
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg);
 
 typedef std::shared_ptr<UdpPacket> UdpPacketPtr;

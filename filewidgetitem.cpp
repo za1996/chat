@@ -3,11 +3,17 @@
 
 #include <QFontMetrics>
 
-FileWidgetItem::FileWidgetItem(QWidget *parent) :
+FileWidgetItem::FileWidgetItem(uint32_t FileNum, bool isLocalNum, bool isUpload, QWidget *parent = 0) :
     QWidget(parent),
-    ui(new Ui::FileWidgetItem)
+    ui(new Ui::FileWidgetItem),
+    m_FileNum(FileNum),
+    m_isLocalNum(isLocalNum)
 {
     ui->setupUi(this);
+    if(isUpload)
+    {
+        ui->DownloadButton->hide();
+    }
     connect(ui->DownloadButton, SIGNAL(clicked(bool)), this, SLOT(OnDownloadClick()));
     connect(ui->CancelButton, SIGNAL(clicked(bool)), this, SLOT(OnCancelClick()));
 }
@@ -36,11 +42,19 @@ void FileWidgetItem::SetProBarMaxVal(int Size)
     ui->ProgressBar->setRange(0, Size);
 }
 
+void FileWidgetItem::SetRemoteFileNum(uint32_t FileNum)
+{
+    m_FileNum = FileNum;
+    m_isLocalNum = false;
+}
+
 void FileWidgetItem::AddVal(int val)
 {
     int old = ui->ProgressBar->value();
     ui->ProgressBar->setValue(old + val);
 }
+
+
 
 void FileWidgetItem::OnDownloadClick()
 {
@@ -49,5 +63,8 @@ void FileWidgetItem::OnDownloadClick()
 
 void FileWidgetItem::OnCancelClick()
 {
+    ui->DownloadButton->hide();
+    ui->CancelButton->hide();
+    ui->MsgLabel->setText("取消");
     emit CancelFile();
 }

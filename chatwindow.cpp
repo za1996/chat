@@ -70,6 +70,13 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, const QString &Name, QWid
         }
     }
 
+    m_FileTransferLayout = new QHBoxLayout(ui->MainBoard);
+    m_FileTransferLayout->setAlignment(Qt::AlignHCenter);
+    m_FileTransferInfo = new QListWidget(ui->MainBoard);
+    m_FileTransferInfo->resize(200, 600);
+    m_FileTransferInfo->setMaximumHeight(600);
+    m_FileTransferLayout->addWidget(m_FileTransferInfo);
+
 
     ui->MsgEdit->installEventFilter(this);
     ui->MsgEdit->setFont(QFont(tr("Consolas"), 14));

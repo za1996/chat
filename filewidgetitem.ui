@@ -119,6 +119,19 @@ QPushButton#CancelButton:pressed
     <string>取消</string>
    </property>
   </widget>
+  <widget class="QLabel" name="MsgLabel">
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>0</y>
+     <width>60</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>

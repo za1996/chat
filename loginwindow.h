@@ -44,6 +44,7 @@ private slots:
     void onLoginIn();
     void onRemoveAccount(int m_item);
     void onLoginRes();
+    void onRegister();
 
 private:
     Ui::LoginWindow *ui;

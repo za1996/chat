@@ -428,6 +428,18 @@ MessagePtr CreateAddMemberToGroupMsg(uint32_t srcID, uint32_t flag, uint32_t Use
     return m;
 }
 
+MessagePtr CreateRegisterAccountMsg(uint32_t flag, const QString &Name, const QString &Password, const QString &Answer)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["Name"] = Name.toStdString();
+    info["Password"] = Password.toStdString();
+    info["Answer"] = Answer.toStdString();
+    m->setHead(REQID, SERVERID, LOGINEVENTGROUP, REGISTERACCOUNTACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg)
 {
     auto m = Message::CreateObject();

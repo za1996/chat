@@ -26,6 +26,7 @@
 
 //0x0
 #define LOGINACTION 0x0
+#define REGISTERACCOUNTACTION 0x1
 #define SOCKETMERGEACTION 0xfff
 #define SYSTESTLOGACTION 0xffff
 
@@ -134,6 +135,7 @@
 
 //0xffff
 #define SYSRESSUCCESSCODE 0x0
+#define RESREGISTERCODE 0x1
 #define SYSRESERRORCODE 0xffff
 
 

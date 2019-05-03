@@ -12,12 +12,13 @@ class FileWidgetItem : public QWidget
     Q_OBJECT
 
 public:
-    explicit FileWidgetItem(bool isUpload, QWidget *parent = 0);
+    explicit FileWidgetItem(uint32_t FileNum, bool isLocalNum, bool isUpload, QWidget *parent = 0);
     ~FileWidgetItem();
 
     void SetFileName(const QString& FileName);
     void SetProBarMaxVal(int Size);
     void AddVal(int val);
+    void SetRemoteFileNum(uint32_t);
 
 signals:
     void DownloadFile();
@@ -30,7 +31,7 @@ private slots:
 private:
     Ui::FileWidgetItem *ui;
     uint32_t m_FileNum;
-    bool isLocalNum;
+    bool m_isLocalNum;
 };
 
 #endif // FILEWIDGETITEM_H

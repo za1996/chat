@@ -11,6 +11,7 @@
 #include <opencv2/dnn.hpp>
 #include <QTableWidget>
 #include <QFileInfo>
+#include <QListWidget>
 #include "videowindow.h"
 #include "message.h"
 #include "titlebar.h"
@@ -42,6 +43,8 @@ private:
     std::function<void(uint32_t)> m_DelHandle;
     VideoWindow *m_VideoWindow;
     QHBoxLayout *m_VideoWindowLayout;
+    QHBoxLayout *m_FileTransferLayout;
+    QListWidget *m_FileTransferInfo;
     std::atomic_bool m_IsUdpChatNow;
     QTimer m_ShowVideoTimer;
     AudioPlayer *m_AudioPlayer;

@@ -5,6 +5,7 @@
 #include "mainwindow.h"
 #include "message.h"
 #include "global.h"
+#include "registerwin.h"
 
 #include <nlohmann/json.hpp>
 
@@ -147,6 +148,7 @@ void LoginWindow::initConnections()
     connect(m_titleBar, SIGNAL(signalButtonCloseClicked()), this, SLOT(onCloseButtonClicked()));
     connect(m_titleBar, SIGNAL(signalButtonMinClicked()), this, SLOT(onMinButtonClicked()));
     connect(ui->loginButton, SIGNAL(clicked(bool)), this, SLOT(onLoginIn()));
+    connect(ui->registerAccount, SIGNAL(clicked(bool)), this, SLOT(onRegister()));
 }
 
 void LoginWindow::onCloseButtonClicked()
@@ -251,5 +253,11 @@ void LoginWindow::onLoginRes()
 //    std::shared_ptr<Message> &m = mlist.front();
 //    QDebug q = qDebug();
 //    m->operator <<(q);
+}
+
+void LoginWindow::onRegister()
+{
+    RegisterWin *w = new RegisterWin();
+    w->show();
 }
 

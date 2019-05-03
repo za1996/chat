@@ -50,7 +50,8 @@ SOURCES += \
     tcpfilerecvicer.cpp \
     filewidgetitem.cpp \
     systemmessagewin.cpp \
-    systemmessageitem.cpp
+    systemmessageitem.cpp \
+    registerwin.cpp
 
 HEADERS += \
         loginwindow.h \
@@ -79,7 +80,8 @@ HEADERS += \
     tcpfilerecvicer.h \
     filewidgetitem.h \
     systemmessagewin.h \
-    systemmessageitem.h
+    systemmessageitem.h \
+    registerwin.h
 
 FORMS += \
         loginwindow.ui \
@@ -92,7 +94,8 @@ FORMS += \
     profileuploadwin.ui \
     filewidgetitem.ui \
     systemmessagewin.ui \
-    systemmessageitem.ui
+    systemmessageitem.ui \
+    registerwin.ui
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../openCV/opencv/build/x64/vc15/lib/ -lopencv_world401
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../openCV/opencv/build/x64/vc15/lib/ -lopencv_world401d

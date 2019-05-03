@@ -34,12 +34,13 @@ public:
     ~MainWindow();
 
     void SignalTest();
-    void EmitRecvFileData(uint32_t, uint32_t, int, int);
+    void EmitRecvFileData(uint64_t, uint32_t, int, int);
+    void EmitSendFileData(uint64_t, uint32_t, int, int);
 
-    void AddSendFile(uint32_t FileNum, uint32_t Id, int FileCode, std::string FileName);
-    void AddDownloadFile(uint32_t FileNum, const DowloadFileItem &info);
-    void SignalSendFile(uint32_t);
-    void CloseFileNum(uint32_t);
+    void AddSendFile(uint64_t FileNum, uint32_t Id, int FileCode, std::string FileName);
+    void AddDownloadFile(uint64_t FileNum, const DowloadFileItem &info);
+    void SignalSendFile(uint64_t);
+    void CloseFileNum(uint64_t);
 
 private:
     enum {SPACESIZE = 10, PROFILESIZE = 80};
@@ -162,7 +163,8 @@ protected:
 signals:
     void HasMessage(uint32_t, std::shared_ptr<Message>);
     void Test();
-    void FileDataBlockRecv(uint32_t, uint32_t, int, int);
+    void FileDataBlockRecv(uint64_t, uint32_t, int, int);
+    void FileDataBlockSend(uint64_t, uint32_t, int, int);
     void ReadyChangeProfile(uint32_t, QString);
 
 private slots:
@@ -185,7 +187,7 @@ private slots:
 
     void ShowFriendsGroupTree();
     void ShowUserGroupList();
-    void HandleRecvFileData(uint32_t, uint32_t, int, int);
+    void HandleRecvFileData(uint64_t, uint32_t, int, int);
     void ChangeProfile(uint32_t, QString);
     void AddRemoteFriend();
     void NewUsersGroup();

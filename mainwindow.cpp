@@ -144,6 +144,8 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 
     m_UserDesc->setText("UserDesc");
 
+    GlobalFileNum |= ((uint64_t)m_UserId << 32);
+
 
 //    m_UdpSocket.setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 1024 * 1024 * 4);
 
@@ -156,7 +158,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     connect(m_addRemoteFriend, SIGNAL(triggered(bool)), this, SLOT(AddRemoteFriend()));
     connect(m_addUsersGroup, SIGNAL(triggered(bool)), this, SLOT(NewUsersGroup()));
     connect(m_joinInOtherUsersGroup, SIGNAL(triggered(bool)), this, SLOT(WantToJoinInOtherGroup()));
-    connect(this, SIGNAL(FileDataBlockRecv(uint32_t, uint32_t, int, int)), this, SLOT(HandleRecvFileData(uint32_t, uint32_t, int, int)));
+    connect(this, SIGNAL(FileDataBlockRecv(uint64_t, uint32_t, int, int)), this, SLOT(HandleRecvFileData(uint64_t, uint32_t, int, int)));
 //    connect(&m_ShowVideoTimer, SIGNAL(timeout()), this, SLOT(ShowVideo()));
 
 
@@ -215,29 +217,36 @@ MainWindow::~MainWindow()
 
 }
 
-void MainWindow::EmitRecvFileData(uint32_t FileNum, uint32_t Id, int FileCode, int Size)
+void MainWindow::EmitRecvFileData(uint64_t FileNum, uint32_t Id, int FileCode, int Size)
 {
+    qDebug() << __FUNCTION__;
     emit FileDataBlockRecv(FileNum, Id, FileCode, Size);
 }
 
-void MainWindow::AddSendFile(uint32_t FileNum, uint32_t Id, int FileCode, std::string FileName)
+void MainWindow::EmitSendFileData(uint64_t FileNum, uint32_t Id, int FileCode, int Size)
+{
+    qDebug() << __FUNCTION__;
+    emit FileDataBlockSend(FileNum, Id, FileCode, Size);
+}
+
+void MainWindow::AddSendFile(uint64_t FileNum, uint32_t Id, int FileCode, std::string FileName)
 {
     m_TcpFile->AddFile(FileNum, Id, FileCode, FileName);
 }
 
-void MainWindow::AddDownloadFile(uint32_t FileNum, const DowloadFileItem &info)
+void MainWindow::AddDownloadFile(uint64_t FileNum, const DowloadFileItem &info)
 {
     m_DowloadFileMap.insert(FileNum, info);
     m_IsDowloadNow = true;
     DownloadFile();
 }
 
-void MainWindow::SignalSendFile(uint32_t FileNum)
+void MainWindow::SignalSendFile(uint64_t FileNum)
 {
     m_TcpFile->send(FileNum);
 }
 
-void MainWindow::CloseFileNum(uint32_t FileNum)
+void MainWindow::CloseFileNum(uint64_t FileNum)
 {
     m_FileNumStoreMap.remove(FileNum);
 //    auto fit = m_FileNumStoreMap.find(FileNum);
@@ -639,8 +648,8 @@ void MainWindow::ReadySendProfile(MessagePtr m)
 {
     qDebug() << __FUNCTION__;
     json info = json::parse((char *)m->data());
-    uint32_t ClientFileNum = info["ClientFileNum"].get<json::number_unsigned_t>();
-    uint32_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    uint64_t ClientFileNum = info["ClientFileNum"].get<json::number_unsigned_t>();
+    uint64_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
     uint32_t Id = info["Id"].get<json::number_unsigned_t>();
     int code = info["FileCode"].get<json::number_unsigned_t>();
     auto it = m_ClientFileNumMap.find(ClientFileNum);
@@ -658,7 +667,7 @@ void MainWindow::SendFileNumDataContinue(MessagePtr m)
 {
     qDebug() << __FUNCTION__;
     json info = json::parse((char *)m->data());
-    uint32_t FileNum = info["FileNum"];
+    uint64_t FileNum = info["FileNum"];
     m_TcpFile->send(FileNum);
 }
 
@@ -673,7 +682,7 @@ void MainWindow::DownloadFileData(MessagePtr m)
         uint32_t Id = info[i]["Id"].get<json::number_unsigned_t>();
         int Size = info[i]["Length"].get<int>();
         std::string Name = info[i]["FileName"].get<std::string>();
-        uint32_t FileNum = info[i]["FileNum"].get<json::number_unsigned_t>();
+        uint64_t FileNum = info[i]["FileNum"].get<json::number_unsigned_t>();
         std::string Path;
         if(FileCode == DOWNLOADUSERPROFILE)
         {
@@ -693,7 +702,7 @@ void MainWindow::DownloadFileEnd(MessagePtr m)
 {
     qDebug() << __FUNCTION__;
     json info = json::parse((char *)m->data());
-    uint32_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    uint64_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
     CloseFileNum(FileNum);
 }
 
@@ -806,7 +815,7 @@ void MainWindow::DownloadFile()
                 MessagePtr m;
                 if(FileCode == FILEDATATRANSFER)
                 {
-                    m = CreateResSendFileByFriend(m_UserId, (*it).Id, 0, (*it).SenderFileNum, (*it).FileNum);
+                    m = CreateResSendFileByFriend(m_UserId, (*it).Id, 0, (*it).FileNum);
                 }
                 else
                 {
@@ -1071,6 +1080,8 @@ void MainWindow::CreateChatWindow(uint32_t FriendId)
         connect(this, SIGNAL(HasMessage(uint32_t,std::shared_ptr<Message>)), w, SLOT(HandleMessage(uint32_t,std::shared_ptr<Message>)));
 //        connect(this, SIGNAL(ChatWindowReadyReadUdp(uint32_t)), w, SLOT(StartReadyShowVideo(uint32_t)));
         connect(w, SIGNAL(ChatWindowUdpChatEnd(uint32_t)), this, SLOT(RemoveUdpChatFriend(uint32_t)));
+        connect(this, SIGNAL(FileDataBlockSend(uint64_t,uint32_t,int,int)), w, SLOT(HandleSendOrRecvSignal(uint64_t,uint32_t,int,int)));
+        connect(this, SIGNAL(FileDataBlockRecv(uint64_t,uint32_t,int,int)), w, SLOT(HandleSendOrRecvSignal(uint64_t,uint32_t,int,int)));
         m_FriendsChatMap.insert(FriendId, w);
         w->SetDelHandle(std::bind(&MainWindow::DelChatWindow, this, std::placeholders::_1));
         w->show();
@@ -1476,7 +1487,7 @@ void MainWindow::ShowUserGroupList()
     m_UsersGroupList->raise();
 }
 
-void MainWindow::HandleRecvFileData(uint32_t FileNum, uint32_t Id, int FileCode, int Size)
+void MainWindow::HandleRecvFileData(uint64_t FileNum, uint32_t Id, int FileCode, int Size)
 {
     qDebug() << __FUNCTION__;
     qDebug() << "FileNum : " << FileNum << " Id : " << Id << " FileCode : " << FileCode << " Size : " << Size;

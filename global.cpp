@@ -16,15 +16,15 @@ std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendVideoDataQ
 std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendAudioDataQueueMap;
 moodycamel::ConcurrentQueue<SendFileItem> m_FileQueue;
 std::atomic_int32_t m_ClientFileNum = 0;
-QHash<uint32_t, std::string> m_ClientFileNumMap;
-QHash<uint32_t, std::string> m_RemoteFileNumMap;
-QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumStoreMap;
-QHash<uint32_t, DowloadFileItem> m_DowloadFileMap;
-QHash<uint32_t, SendFileItem> m_SendFileMap;
-QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumOpenSendMap;
+QHash<uint64_t, std::string> m_ClientFileNumMap;
+QHash<uint64_t, std::string> m_RemoteFileNumMap;
+QHash<uint64_t, std::shared_ptr<QFile>> m_FileNumStoreMap;
+QHash<uint64_t, DowloadFileItem> m_DowloadFileMap;
+QHash<uint64_t, SendFileItem> m_SendFileMap;
+QHash<uint64_t, std::shared_ptr<QFile>> m_FileNumOpenSendMap;
 QVector<SysMsgCacheItem> m_SysMsgCache;
 uint32_t m_ThisIsId;
-uint32_t FileNum = 0xf0000000;
+uint64_t GlobalFileNum = 0xf0000000;
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist)
 {
@@ -286,7 +286,7 @@ MessagePtr CreateReqDownloadProfile(uint32_t srcID, uint32_t flag, const json& i
 }
 
 
-MessagePtr CreateDownloadFileDataMsg(uint32_t srcID, uint32_t flag, uint32_t FileId)
+MessagePtr CreateDownloadFileDataMsg(uint32_t srcID, uint32_t flag, uint64_t FileId)
 {
     auto m = Message::CreateObject();
     json info;
@@ -296,7 +296,7 @@ MessagePtr CreateDownloadFileDataMsg(uint32_t srcID, uint32_t flag, uint32_t Fil
     return m;
 }
 
-MessagePtr CreateReadySendFileToFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t Size, const std::string &FileName, uint32_t LocalFileNum)
+MessagePtr CreateReadySendFileToFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t Size, const std::string &FileName, uint64_t LocalFileNum)
 {
     auto m = Message::CreateObject();
     json info;
@@ -308,18 +308,17 @@ MessagePtr CreateReadySendFileToFriend(uint32_t srcID, uint32_t destId, uint32_t
     return m;
 }
 
-MessagePtr CreateResSendFileByFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t LocalFileNum, uint32_t FileNum)
+MessagePtr CreateResSendFileByFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint64_t FileNum)
 {
     auto m = Message::CreateObject();
     json info;
-    info["SenderFileNum"] = LocalFileNum;
     info["FileNum"] = FileNum;
     m->setHead(srcID, destId, TRANSFERDATAGROUP, RESTRANSFERFILEACTION, flag);
     m->setData(info.dump());
     return m;
 }
 
-MessagePtr CreateFileDataTransferMsg(uint32_t srcID, uint32_t destId, uint32_t flag, const char* buf, int size, uint32_t FileNum)
+MessagePtr CreateFileDataTransferMsg(uint32_t srcID, uint32_t destId, uint32_t flag, const char* buf, int size, uint64_t FileNum)
 {
     auto m = Message::CreateObject();
     m->setHead(srcID, destId, RESFILESENDETHREADRGROUP, TRANSFERFILEDATAACTION, flag);
@@ -328,7 +327,7 @@ MessagePtr CreateFileDataTransferMsg(uint32_t srcID, uint32_t destId, uint32_t f
     return m;
 }
 
-MessagePtr CreateFileTransferContinueMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum)
+MessagePtr CreateFileTransferContinueMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint64_t FileNum)
 {
     auto m = Message::CreateObject();
     json info;
@@ -338,7 +337,7 @@ MessagePtr CreateFileTransferContinueMsg(uint32_t srcID, uint32_t destId, uint32
     return m;
 }
 
-MessagePtr CreateFileTransferEndMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum)
+MessagePtr CreateFileTransferEndMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint64_t FileNum)
 {
     auto m = Message::CreateObject();
     json info;

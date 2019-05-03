@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>200</width>
-    <height>30</height>
+    <height>60</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -51,7 +51,7 @@
    <property name="geometry">
     <rect>
      <x>140</x>
-     <y>0</y>
+     <y>30</y>
      <width>30</width>
      <height>30</height>
     </rect>
@@ -63,21 +63,7 @@
     </size>
    </property>
    <property name="styleSheet">
-    <string notr="true">QPushButton#DownloadButton
-{
-    color:rgb(38 , 133 , 227);
-    background-color:transparent;
-}
-
-QPushButton#DownloadButton:hover
-{
-    color:rgb(97 , 179 , 246);
-}
-
-QPushButton#DownloadButton:pressed
-{
-    color:rgb(0 , 109 , 176);
-}</string>
+    <string notr="true"/>
    </property>
    <property name="text">
     <string>下载</string>
@@ -87,7 +73,7 @@ QPushButton#DownloadButton:pressed
    <property name="geometry">
     <rect>
      <x>170</x>
-     <y>0</y>
+     <y>30</y>
      <width>30</width>
      <height>30</height>
     </rect>
@@ -99,21 +85,7 @@ QPushButton#DownloadButton:pressed
     </size>
    </property>
    <property name="styleSheet">
-    <string notr="true">QPushButton#CancelButton
-{
-    color:rgb(38 , 133 , 227);
-    background-color:transparent;
-}
-
-QPushButton#CancelButton:hover
-{
-    color:rgb(97 , 179 , 246);
-}
-
-QPushButton#CancelButton:pressed
-{
-    color:rgb(0 , 109 , 176);
-}</string>
+    <string notr="true"/>
    </property>
    <property name="text">
     <string>取消</string>
@@ -122,9 +94,25 @@ QPushButton#CancelButton:pressed
   <widget class="QLabel" name="MsgLabel">
    <property name="geometry">
     <rect>
-     <x>140</x>
+     <x>0</x>
+     <y>30</y>
+     <width>200</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="FileNameLabel">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
      <y>0</y>
-     <width>60</width>
+     <width>200</width>
      <height>30</height>
     </rect>
    </property>
@@ -132,6 +120,11 @@ QPushButton#CancelButton:pressed
     <string/>
    </property>
   </widget>
+  <zorder>ProgressBar</zorder>
+  <zorder>MsgLabel</zorder>
+  <zorder>CancelButton</zorder>
+  <zorder>DownloadButton</zorder>
+  <zorder>FileNameLabel</zorder>
  </widget>
  <resources/>
  <connections/>

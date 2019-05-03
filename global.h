@@ -32,12 +32,12 @@ MessagePtr CreateSocketMergeMsg(uint32_t flag, uint32_t ChangeId, uint16_t Socke
 MessagePtr CreateReadySendProfileMsg(uint32_t srcID, uint32_t flag, uint32_t ClientFileNum, std::string FileName, int FileCode, uint32_t id);
 MessagePtr CreateSendProfileEndMsg(uint32_t srcID, uint32_t flag, uint32_t FileNum);
 MessagePtr CreateReqDownloadProfile(uint32_t srcID, uint32_t flag, const json& info);
-MessagePtr CreateDownloadFileDataMsg(uint32_t srcID, uint32_t flag, uint32_t FileId);
-MessagePtr CreateReadySendFileToFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t Size, const std::string &FileName, uint32_t LocalFileNum);
-MessagePtr CreateResSendFileByFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t LocalFileNum, uint32_t FileNum);
-MessagePtr CreateFileDataTransferMsg(uint32_t srcID, uint32_t destId, uint32_t flag, const char* buf, int size, uint32_t FileNum);
-MessagePtr CreateFileTransferContinueMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum);
-MessagePtr CreateFileTransferEndMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t FileNum);
+MessagePtr CreateDownloadFileDataMsg(uint32_t srcID, uint32_t flag, uint64_t FileId);
+MessagePtr CreateReadySendFileToFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t Size, const std::string &FileName, uint64_t LocalFileNum);
+MessagePtr CreateResSendFileByFriend(uint32_t srcID, uint32_t destId, uint32_t flag, uint64_t FileNum);
+MessagePtr CreateFileDataTransferMsg(uint32_t srcID, uint32_t destId, uint32_t flag, const char* buf, int size, uint64_t FileNum);
+MessagePtr CreateFileTransferContinueMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint64_t FileNum);
+MessagePtr CreateFileTransferEndMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint64_t FileNum);
 MessagePtr CreateAddRemoteFriendMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint32_t UserId, const QString& Name);
 MessagePtr CreateChangeUsersGroupInfoMsg(uint32_t srcID, uint32_t flag, uint32_t UsersGroupId, const QString &Name, const QString &Desc);
 MessagePtr CreateChangeMyselfInfoMsg(uint32_t srcID, uint32_t flag, const QString &Name, const QString &Desc, const QString &Birthday, int Sex);
@@ -58,14 +58,14 @@ extern std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendVid
 extern std::map<uint32_t, moodycamel::ConcurrentQueue<UdpPacketPtr>> m_FriendAudioDataQueueMap;
 extern moodycamel::ConcurrentQueue<SendFileItem> m_FileQueue;
 extern std::atomic_int32_t m_ClientFileNum;
-extern QHash<uint32_t, std::string> m_ClientFileNumMap;
-extern QHash<uint32_t, std::string> m_RemoteFileNumMap;
-extern QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumStoreMap;
-extern QHash<uint32_t, DowloadFileItem> m_DowloadFileMap;
-extern QHash<uint32_t, SendFileItem> m_SendFileMap;
-extern QHash<uint32_t, std::shared_ptr<QFile>> m_FileNumOpenSendMap;
+extern QHash<uint64_t, std::string> m_ClientFileNumMap;
+extern QHash<uint64_t, std::string> m_RemoteFileNumMap;
+extern QHash<uint64_t, std::shared_ptr<QFile>> m_FileNumStoreMap;
+extern QHash<uint64_t, DowloadFileItem> m_DowloadFileMap;
+extern QHash<uint64_t, SendFileItem> m_SendFileMap;
+extern QHash<uint64_t, std::shared_ptr<QFile>> m_FileNumOpenSendMap;
 extern uint32_t m_ThisIsId;
-extern uint32_t FileNum;
+extern uint64_t GlobalFileNum;
 extern QVector<SysMsgCacheItem> m_SysMsgCache;
 //#define UDP_MAX_SIZE 14336
 #define UDP_MAX_SIZE 1436

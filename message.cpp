@@ -40,9 +40,9 @@ void Message::setUdpInfo(uint16_t totalSize, uint16_t packetStart, uint32_t pack
     memcpy(&m_msgHead.space[2], &time, sizeof(uint64_t));
 }
 
-void Message::setTcpFileNum(uint32_t FileNum)
+void Message::setTcpFileNum(uint64_t FileNum)
 {
-    m_msgHead.space[0] = FileNum;
+    memcpy(&m_msgHead.space[0], &FileNum, sizeof(uint64_t));
 }
 
 void Message::setData(const char *buf, const int n)
@@ -65,6 +65,13 @@ void Message::setRawSize(const int n)
     m_buf = new char[n];
     m_dataSize = n - sizeof(MsgHead);
     m_hasHead = true;
+}
+
+uint64_t Message::GetFileNum()
+{
+    uint64_t FileNum = 0;
+    memcpy(&FileNum, &m_msgHead.space[0], sizeof(uint64_t));
+    return FileNum;
 }
 
 const void* Message::tobuf()

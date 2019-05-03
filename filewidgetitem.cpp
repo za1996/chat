@@ -3,17 +3,18 @@
 
 #include <QFontMetrics>
 
-FileWidgetItem::FileWidgetItem(uint32_t FileNum, bool isLocalNum, bool isUpload, QWidget *parent = 0) :
+FileWidgetItem::FileWidgetItem(uint64_t FileNum, bool isUpload, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::FileWidgetItem),
     m_FileNum(FileNum),
-    m_isLocalNum(isLocalNum)
+    m_FileSize(0)
 {
     ui->setupUi(this);
     if(isUpload)
     {
         ui->DownloadButton->hide();
     }
+    ui->ProgressBar->setValue(0);
     connect(ui->DownloadButton, SIGNAL(clicked(bool)), this, SLOT(OnDownloadClick()));
     connect(ui->CancelButton, SIGNAL(clicked(bool)), this, SLOT(OnCancelClick()));
 }
@@ -26,39 +27,39 @@ FileWidgetItem::~FileWidgetItem()
 void FileWidgetItem::SetFileName(const QString &FileName)
 {
     QString Name = FileName;
-    QFontMetrics fontWidth(ui->ProgressBar->font());
+    QFontMetrics fontWidth(ui->FileNameLabel->font());
     int width = fontWidth.width(Name);
     int max = ui->ProgressBar->width() - ui->DownloadButton->width() - ui->CancelButton->width();
     if(width >= max)  //当字符串宽度大于最大宽度时进行转换
     {
         Name = fontWidth.elidedText(Name, Qt::ElideRight, max);  //右部显示省略号
     }
-    ui->ProgressBar->setFormat(Name);
-    ui->ProgressBar->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    ui->FileNameLabel->setText(Name);
 }
 
 void FileWidgetItem::SetProBarMaxVal(int Size)
 {
     ui->ProgressBar->setRange(0, Size);
+    m_FileSize = Size;
 }
 
-void FileWidgetItem::SetRemoteFileNum(uint32_t FileNum)
-{
-    m_FileNum = FileNum;
-    m_isLocalNum = false;
-}
 
 void FileWidgetItem::AddVal(int val)
 {
     int old = ui->ProgressBar->value();
-    ui->ProgressBar->setValue(old + val);
+    int max = ui->ProgressBar->maximum();
+    val = val + old;
+    if(val > max)
+        val = max;
+    ui->ProgressBar->setValue(val);
 }
 
 
 
 void FileWidgetItem::OnDownloadClick()
 {
-    emit DownloadFile();
+    ui->DownloadButton->hide();
+    emit DownloadFile(m_FileNum);
 }
 
 void FileWidgetItem::OnCancelClick()
@@ -66,5 +67,14 @@ void FileWidgetItem::OnCancelClick()
     ui->DownloadButton->hide();
     ui->CancelButton->hide();
     ui->MsgLabel->setText("取消");
-    emit CancelFile();
+    ui->MsgLabel->show();
+    emit CancelFile(m_FileNum);
+}
+
+void FileWidgetItem::TransferOver()
+{
+    ui->DownloadButton->hide();
+    ui->CancelButton->hide();
+    ui->MsgLabel->setText("成功");
+    ui->MsgLabel->show();
 }

@@ -51,7 +51,7 @@ void TcpFileRecvicer::read()
     getMessage(*m_Socket, -1, mlist);
     for(auto mit = mlist.begin(); mit != mlist.end(); ++mit)
     {
-        uint32_t FileNum = (*mit)->GetSpace(0);
+        uint64_t FileNum = (*mit)->GetFileNum();
         qDebug() << "FileNum : " << FileNum;
         auto fit = m_FileNumStoreMap.find(FileNum);
         qDebug() << "find FileNum Map";
@@ -61,13 +61,13 @@ void TcpFileRecvicer::read()
             auto it = m_DowloadFileMap.find(FileNum);
             assert(it != m_DowloadFileMap.end());
             qDebug() << "Send SIGNAL";
-            SendSignal(FileNum, (*it).Id, (*it).FileCode, (*mit)->dataSize());
+            RecvSignal(FileNum, (*it).Id, (*it).FileCode, (*mit)->dataSize());
 
         }
     }
 }
 
-void TcpFileRecvicer::SendSignal(uint32_t FileNum, uint32_t Id, int FileCode, int Size)
+void TcpFileRecvicer::RecvSignal(uint64_t FileNum, uint32_t Id, int FileCode, int Size)
 {
     m_MainWin->EmitRecvFileData(FileNum, Id, FileCode, Size);
 }

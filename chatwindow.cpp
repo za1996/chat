@@ -4,6 +4,7 @@
 #include "messagewidget.h"
 #include "chatwindowmessageitem.h"
 #include "mainwindow.h"
+#include "filewidgetitem.h"
 
 #include <QPainter>
 #include <QPushButton>
@@ -75,7 +76,10 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, const QString &Name, QWid
     m_FileTransferInfo = new QListWidget(ui->MainBoard);
     m_FileTransferInfo->resize(200, 600);
     m_FileTransferInfo->setMaximumHeight(600);
+    m_FileTransferInfo->setMinimumWidth(200);
     m_FileTransferLayout->addWidget(m_FileTransferInfo);
+    ui->MainLayout->addLayout(m_FileTransferLayout);
+    m_FileTransferInfo->hide();
 
 
     ui->MsgEdit->installEventFilter(this);
@@ -97,6 +101,7 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, const QString &Name, QWid
     connect(ui->WordButton, SIGNAL(clicked(bool)), this, SLOT(ChangeWordStyle()));
     connect(m_EmotionWidget, SIGNAL(cellClicked(int,int)), this, SLOT(AddEmotion(int, int)));
     connect(ui->FileButton, SIGNAL(clicked(bool)), this, SLOT(ReadySendFile()));
+    connect(ui->TransferInfoButton, SIGNAL(clicked(bool)), this, SLOT(OnTransferInfoClick()));
 
     Inithandle();
 }
@@ -256,9 +261,25 @@ void ChatWindow::RemoveVideoChat()
     m_IsUdpChatNow = false;
     ui->MainLayout->removeItem(m_VideoWindowLayout);
     m_ShowVideoTimer.stop();
-    this->resize(ui->MsgEdit->width(), this->height());
+//    this->resize(ui->MsgEdit->width(), this->height());
+    this->resize(this->width() - m_VideoWindow->width(), this->height());
     delete m_AudioPlayer;
     emit ChatWindowUdpChatEnd(m_FriendId);
+}
+
+void ChatWindow::AddFileTransferItem(uint64_t FileNum, bool isUpload, int FileSize, const QString& FileName)
+{
+    FileWidgetItem *fitem = new FileWidgetItem(FileNum, isUpload);
+    QListWidgetItem *item = new QListWidgetItem(m_FileTransferInfo);
+    item->setSizeHint(QSize(0, fitem->height()));
+    fitem->SetFileName(FileName);
+    fitem->SetProBarMaxVal(FileSize);
+    m_FileTransferInfo->addItem(item);
+    m_FileTransferInfo->setItemWidget(item, fitem);
+    m_FileTransferItemMap.insert(FileNum, item);
+    connect(fitem, SIGNAL(DownloadFile(uint64_t)), this, SLOT(DownloadFile(uint64_t)));
+    qDebug() << __FUNCTION__ << " FileSize: " << FileSize;
+    fitem->show();
 }
 
 
@@ -280,9 +301,45 @@ void ChatWindow::HandleMessage(uint32_t id, std::shared_ptr<Message> m)
     }
 }
 
+void ChatWindow::HandleSendOrRecvSignal(uint64_t FileNum, uint32_t Id, int FileCode, int Size)
+{
+    qDebug() << __FUNCTION__;
+    qDebug() << "id : " << Id << " FileCode : " << (FileCode == FILEDATATRANSFER) << " File Size : " << Size;
+    if(Id == m_FriendId && FileCode == FILEDATATRANSFER)
+    {
+        auto it = m_FileTransferItemMap.find(FileNum);
+        if(it != m_FileTransferItemMap.end())
+        {
+            FileWidgetItem *item = dynamic_cast<FileWidgetItem *>(m_FileTransferInfo->itemWidget(*it));
+            assert(item != nullptr);
+            if(item)
+            {
+                item->AddVal(Size);
+            }
+        }
+    }
+}
+
 
 
 //private slot
+void ChatWindow::OnTransferInfoClick()
+{
+    static bool show = false;
+    if(!show)
+    {
+        m_FileTransferInfo->show();
+        this->resize(this->width() + m_FileTransferInfo->width(), this->height());
+        show = true;
+    }
+    else
+    {
+        m_FileTransferInfo->hide();
+        this->resize(this->width() - m_FileTransferInfo->width(), this->height());
+        show = false;
+    }
+}
+
 void ChatWindow::CloseVideoWindow()
 {
     RemoveVideoChat();
@@ -383,16 +440,29 @@ void ChatWindow::AddEmotion(int row, int col)
 
 void ChatWindow::ReadySendFile()
 {
-    static uint32_t LocalFileNum = 1;
     QString FullPath = QFileDialog::getOpenFileName(this, tr("选择文件"), "C:");
     if(!FullPath.isEmpty())
     {
         QFileInfo info(FullPath);
-        m_ReadySendFile.insert(LocalFileNum, info);
-        auto m = CreateReadySendFileToFriend(m_MeId, m_FriendId, 0, info.size(), info.fileName().toStdString(), LocalFileNum);
+        m_ReadySendFile.insert(GlobalFileNum, info);
+        auto m = CreateReadySendFileToFriend(m_MeId, m_FriendId, 0, info.size(), info.fileName().toStdString(), GlobalFileNum);
         SendtoRemote(s, m);
         qDebug() << "send readysendfile";
-        LocalFileNum++;
+        AddFileTransferItem(GlobalFileNum, true, info.size(), info.fileName());
+//        OnTransferInfoClick();
+        GlobalFileNum++;
+    }
+}
+
+void ChatWindow::DownloadFile(uint64_t FileNum)
+{
+    qDebug() << __FUNCTION__ << " FileNum" << FileNum;
+    auto it = m_ReadyDownloadFile.find(FileNum);
+    if(it != m_ReadyDownloadFile.end())
+    {
+        qDebug() << "ready download";
+        m_MainWin->AddDownloadFile(FileNum, *it);
+        m_ReadyDownloadFile.erase(it);
     }
 }
 
@@ -442,14 +512,18 @@ void ChatWindow::ResSendFile(MessagePtr m)
     json info = json::parse((char *)m->data());
     int Size = info["FileSize"].get<json::number_unsigned_t>();
     std::string Name = info["Name"].get<std::string>();
-    DowloadFileItem item(FileNum++, m_FriendId, Size, FILEDATATRANSFER, Name, QString("%1/%2/%3").arg(CACHEPATH).arg(m_MeId).arg("recvfile/").toStdString(), info["SenderFileNum"]);
-    m_MainWin->AddDownloadFile(item.FileNum, item);
+    DowloadFileItem item(info["SenderFileNum"].get<json::number_unsigned_t>(), m_FriendId, Size, FILEDATATRANSFER, Name, QString("%1/%2/%3").arg(CACHEPATH).arg(m_MeId).arg("recvfile/").toStdString());
+    m_ReadyDownloadFile.insert(item.FileNum, item);
+    AddFileTransferItem(item.FileNum, false, item.Length, QString::fromStdString(Name));
+    qDebug() << __FUNCTION__ << " FileNum :" << item.FileNum;
+
+//    m_MainWin->AddDownloadFile(item.FileNum, item);
 }
 
 void ChatWindow::SendFileOrClose(MessagePtr m)
 {
     json info = json::parse((char *)m->data());
-    uint32_t LocalNum = info["SenderFileNum"].get<json::number_unsigned_t>();
+    uint64_t LocalNum = info["FileNum"].get<json::number_unsigned_t>();
     auto it = m_ReadySendFile.find(LocalNum);
     if(it != m_ReadySendFile.end())
     {
@@ -461,14 +535,20 @@ void ChatWindow::SendFileOrClose(MessagePtr m)
 void ChatWindow::SendFileCountinue(MessagePtr m)
 {
     json info = json::parse((char *)m->data());
-    uint32_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    uint64_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
     m_MainWin->SignalSendFile(FileNum);
 }
 
 void ChatWindow::RecvFileEnd(MessagePtr m)
 {
     json info = json::parse((char *)m->data());
-    uint32_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    uint64_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    auto it = m_FileTransferItemMap.find(FileNum);
+    if(it != m_FileTransferItemMap.end())
+    {
+        FileWidgetItem * item = dynamic_cast<FileWidgetItem *>(m_FileTransferInfo->itemWidget(*it));
+        item->TransferOver();
+    }
     m_MainWin->CloseFileNum(FileNum);
 }
 

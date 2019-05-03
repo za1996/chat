@@ -52,11 +52,11 @@ void TcpFileThread::run()
 //        qDebug() << "send error";
 //    }
 //    send();
-    connect(this, SIGNAL(ReadySend(uint32_t,uint32_t)), this, SLOT(RealSend(uint32_t,uint32_t)));
+    connect(this, SIGNAL(ReadySend(uint64_t,uint32_t)), this, SLOT(RealSend(uint64_t,uint32_t)));
     this->exec();
 }
 
-void TcpFileThread::send(uint32_t FileNum)
+void TcpFileThread::send(uint64_t FileNum)
 {
     emit ReadySend(FileNum, 4096);
 }
@@ -68,20 +68,19 @@ void TcpFileThread::read()
     getMessage(*m_Socket, -1, mlist);
     for(auto mit = mlist.begin(); mit != mlist.end(); ++mit)
     {
-        uint32_t FileNum = (*mit)->GetSpace(0);
+        uint64_t FileNum = (*mit)->GetSpace(0);
         auto fit = m_FileNumStoreMap.find(FileNum);
         if(fit != m_FileNumStoreMap.end())
         {
             (*fit)->write((char *)((*mit)->data()), (*mit)->dataSize());
             auto it = m_DowloadFileMap.find(FileNum);
             assert(it != m_DowloadFileMap.end());
-            SendSignal(FileNum, (*it).Id, (*it).FileCode, (*mit)->dataSize());
 
         }
     }
 }
 
-void TcpFileThread::AddFile(uint32_t FileNum, uint32_t Id, int FileCode, std::string FileName)
+void TcpFileThread::AddFile(uint64_t FileNum, uint32_t Id, int FileCode, std::string FileName)
 {
     std::shared_ptr<QFile> file(new QFile(QString::fromStdString(FileName)));
     SendFileItem item(FileNum, Id, file->size(), FileCode, FileName);
@@ -106,12 +105,12 @@ bool TcpFileThread::SendtoRemote(MessagePtr m)
     return true;
 }
 
-void TcpFileThread::SendSignal(uint32_t FileNum, uint32_t Id, int FileCode, int Size)
+void TcpFileThread::SendedSignal(uint64_t FileNum, uint32_t Id, int FileCode, int Size)
 {
-    m_MainWin->EmitRecvFileData(FileNum, Id, FileCode, Size);
+    m_MainWin->EmitSendFileData(FileNum, Id, FileCode, Size);
 }
 
-void TcpFileThread::RealSend(uint32_t FileNum, uint32_t Size)
+void TcpFileThread::RealSend(uint64_t FileNum, uint32_t Size)
 {
     static char buffer[8192];
     auto fit = m_FileNumOpenSendMap.find(FileNum);
@@ -151,6 +150,7 @@ void TcpFileThread::RealSend(uint32_t FileNum, uint32_t Size)
             }
             SendtoRemote(m);
             (*sit).NowLength += realbyte;
+            SendedSignal(FileNum, (*sit).Id, (*sit).FileCode, realbyte);
         }
     }
     else

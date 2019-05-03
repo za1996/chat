@@ -12,16 +12,18 @@ class FileWidgetItem : public QWidget
     Q_OBJECT
 
 public:
-    explicit FileWidgetItem(bool isUpload, QWidget *parent = 0);
+    explicit FileWidgetItem(uint64_t FileNum, bool isUpload, QWidget *parent = 0);
     ~FileWidgetItem();
 
     void SetFileName(const QString& FileName);
     void SetProBarMaxVal(int Size);
     void AddVal(int val);
+    void TransferOver();
+    int GetFileSize() { return FileSize; }
 
 signals:
-    void DownloadFile();
-    void CancelFile();
+    void DownloadFile(uint64_t);
+    void CancelFile(uint64_t);
 
 private slots:
     void OnDownloadClick();
@@ -29,8 +31,8 @@ private slots:
 
 private:
     Ui::FileWidgetItem *ui;
-    uint32_t m_FileNum;
-    bool isLocalNum;
+    uint64_t m_FileNum;
+    int FileSize;
 };
 
 #endif // FILEWIDGETITEM_H

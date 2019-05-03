@@ -49,14 +49,17 @@ private:
     QTimer m_ShowVideoTimer;
     AudioPlayer *m_AudioPlayer;
     bool m_EmotionWidgetShow;
-    QHash<uint32_t, QFileInfo> m_ReadySendFile;
+    QHash<uint64_t, QFileInfo> m_ReadySendFile;
 
     QHash<uint32_t, std::function<void(MessagePtr)>> m_HandleMap;
+    QHash<uint64_t, QListWidgetItem*> m_FileTransferItemMap;
+    QHash<uint64_t, DowloadFileItem> m_ReadyDownloadFile;
 
 private:
     void Inithandle();
     void RemoveVideoChat();
     QImage MatToQImage(cv::Mat &mtx);
+    void AddFileTransferItem(uint64_t FileNum, bool isUpload, int FileSize, const QString& FileName);
 
     void ReqUdpChatMsgHandle(MessagePtr);
     void RecvChatData(MessagePtr);
@@ -80,6 +83,7 @@ private slots:
     void ChangeWordStyle();
     void AddEmotion(int, int);
     void ReadySendFile();
+    void DownloadFile(uint64_t);
 
 signals:
     void ChatWindowUdpChatEnd(uint32_t);
@@ -89,6 +93,8 @@ signals:
 public slots:
 
     void HandleMessage(uint32_t, std::shared_ptr<Message>);
+    void OnTransferInfoClick();
+    void HandleSendOrRecvSignal(uint64_t, uint32_t, int, int);
 };
 
 #endif // CHATWINDOW_H

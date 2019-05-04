@@ -7,7 +7,8 @@ FileWidgetItem::FileWidgetItem(uint64_t FileNum, bool isUpload, QWidget *parent)
     QWidget(parent),
     ui(new Ui::FileWidgetItem),
     m_FileNum(FileNum),
-    m_FileSize(0)
+    m_FileSize(0),
+    m_isUpload(isUpload)
 {
     ui->setupUi(this);
     if(isUpload)
@@ -71,10 +72,19 @@ void FileWidgetItem::OnCancelClick()
     emit CancelFile(m_FileNum);
 }
 
-void FileWidgetItem::TransferOver()
+void FileWidgetItem::TransferOver(bool Success)
 {
+    QString Text = "取消";
+    if(Success)
+    {
+        Text = "成功";
+    }
     ui->DownloadButton->hide();
     ui->CancelButton->hide();
-    ui->MsgLabel->setText("成功");
+    ui->MsgLabel->setText(Text);
     ui->MsgLabel->show();
+}
+void FileWidgetItem::SetHiddenDownloadButton()
+{
+    ui->DownloadButton->hide();
 }

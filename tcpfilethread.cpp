@@ -115,7 +115,7 @@ void TcpFileThread::RealSend(uint64_t FileNum, uint32_t Size)
     static char buffer[8192];
     auto fit = m_FileNumOpenSendMap.find(FileNum);
     auto sit = m_SendFileMap.find(FileNum);
-    assert(fit != m_FileNumOpenSendMap.end() && sit != m_SendFileMap.end());
+//    assert(fit != m_FileNumOpenSendMap.end() && sit != m_SendFileMap.end());
     if(fit != m_FileNumOpenSendMap.end() && sit != m_SendFileMap.end())
     {
         MessagePtr m;
@@ -131,11 +131,16 @@ void TcpFileThread::RealSend(uint64_t FileNum, uint32_t Size)
             {
                 m = CreateSendProfileEndMsg(m_UserId, 0, (*sit).RemoteFileNum);
             }
+            else if(FileCode == UPLOADUSERFILE)
+            {
+                m = CreateSendUserFileToServerEndMsg(m_UserId, 0, (*sit).RemoteFileNum);;
+            }
             else
             {
-
+                return;
             }
             SendtoRemote(m);
+            m_MainWin->CloseSendFileNum((*sit).RemoteFileNum, false);
         }
         else
         {

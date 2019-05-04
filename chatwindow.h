@@ -67,6 +67,7 @@ private:
     void SendFileOrClose(MessagePtr);
     void SendFileCountinue(MessagePtr);
     void RecvFileEnd(MessagePtr);
+    void RemoteForceCloseFile(MessagePtr);
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -84,6 +85,7 @@ private slots:
     void AddEmotion(int, int);
     void ReadySendFile();
     void DownloadFile(uint64_t);
+    void ForceCloseFile(uint64_t);
 
 signals:
     void ChatWindowUdpChatEnd(uint32_t);
@@ -95,6 +97,7 @@ public slots:
     void HandleMessage(uint32_t, std::shared_ptr<Message>);
     void OnTransferInfoClick();
     void HandleSendOrRecvSignal(uint64_t, uint32_t, int, int);
+    void HandleFileSendedEnd(uint64_t);
 };
 
 #endif // CHATWINDOW_H

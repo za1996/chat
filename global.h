@@ -46,6 +46,9 @@ MessagePtr CreateRealAddFriendMsg(uint32_t srcID, uint32_t flag, uint32_t UserId
 MessagePtr CreateReqJoinInOtherGroupMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t GroupId, const QString &UserName);
 MessagePtr CreateAddMemberToGroupMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t GroupId);
 MessagePtr CreateRegisterAccountMsg(uint32_t flag, const QString &Name, const QString &Password, const QString &Answer);
+MessagePtr CreateReqForceCloseFileMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint64_t FileNum);
+MessagePtr CreateReadySendUserFileToServerMsg(uint32_t srcID, uint32_t flag, uint64_t ClientFileNum, std::string FileName, int FileCode, uint32_t id);
+MessagePtr CreateSendUserFileToServerEndMsg(uint32_t srcID, uint32_t flag, uint64_t FileNum);
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg);
 
 typedef std::shared_ptr<UdpPacket> UdpPacketPtr;

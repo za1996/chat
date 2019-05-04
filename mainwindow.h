@@ -40,7 +40,8 @@ public:
     void AddSendFile(uint64_t FileNum, uint32_t Id, int FileCode, std::string FileName);
     void AddDownloadFile(uint64_t FileNum, const DowloadFileItem &info);
     void SignalSendFile(uint64_t);
-    void CloseFileNum(uint64_t);
+    void CloseDownloadFileNum(uint64_t, bool);
+    void CloseSendFileNum(uint64_t, bool);
 
 private:
     enum {SPACESIZE = 10, PROFILESIZE = 80};
@@ -59,6 +60,7 @@ private:
     QAction *m_joinInOtherUsersGroup;
     QPushButton *m_ShowFriendsGroupTreeButton;
     QPushButton *m_ShowUsersGroupListButton;
+    QPushButton *m_NetworkSpaceButton;
     DeleteUsersGroupMemberWin *m_DEUGMWindow;
 
 
@@ -150,6 +152,7 @@ private:
     void AddTheNewFriend(MessagePtr);
     void RemoteUserReqJoinInGroup(MessagePtr);
     void AddRemoteNewUsersGroup(MessagePtr);
+    void HandleResSendToFileServer(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -166,6 +169,9 @@ signals:
     void FileDataBlockRecv(uint64_t, uint32_t, int, int);
     void FileDataBlockSend(uint64_t, uint32_t, int, int);
     void ReadyChangeProfile(uint32_t, QString);
+    void FileTransferEnd(uint64_t);
+    void ResSendToServer(MessagePtr);
+    void FileSendToServerEnd(uint64_t);
 
 private slots:
     void onGroupItemClick(QTreeWidgetItem *pitem, int col);
@@ -192,6 +198,7 @@ private slots:
     void AddRemoteFriend();
     void NewUsersGroup();
     void WantToJoinInOtherGroup();
+    void ShowNetworkSpaceWin();
 };
 
 extern MainWindow *m_MainWin;

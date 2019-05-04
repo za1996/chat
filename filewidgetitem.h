@@ -18,8 +18,10 @@ public:
     void SetFileName(const QString& FileName);
     void SetProBarMaxVal(int Size);
     void AddVal(int val);
-    void TransferOver();
-    int GetFileSize() { return FileSize; }
+    void TransferOver(bool Success);
+    int GetFileSize() { return m_FileSize; }
+    bool IsUpload() { return m_isUpload; }
+    void SetHiddenDownloadButton();
 
 signals:
     void DownloadFile(uint64_t);
@@ -32,7 +34,8 @@ private slots:
 private:
     Ui::FileWidgetItem *ui;
     uint64_t m_FileNum;
-    int FileSize;
+    int m_FileSize;
+    bool m_isUpload;
 };
 
 #endif // FILEWIDGETITEM_H

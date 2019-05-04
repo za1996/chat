@@ -439,6 +439,39 @@ MessagePtr CreateRegisterAccountMsg(uint32_t flag, const QString &Name, const QS
     return m;
 }
 
+MessagePtr CreateReqForceCloseFileMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint64_t FileNum)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["FileNum"] = FileNum;
+    m->setHead(srcID, destId, TRANSFERDATAGROUP, REQFORCECLOSEFILEACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateReadySendUserFileToServerMsg(uint32_t srcID, uint32_t flag, uint64_t ClientFileNum, std::string FileName, int FileCode, uint32_t id)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["FileName"] = FileName;
+    info["ClientFileNum"] = ClientFileNum;
+    info["FileCode"] = FileCode;
+    info["Id"] = id;
+    m->setHead(srcID, SERVERID, FILETRANSFERGROUP, REQREADYSENDUSERFILEACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateSendUserFileToServerEndMsg(uint32_t srcID, uint32_t flag, uint64_t FileNum)
+{
+    auto m = Message::CreateObject();
+    json info;
+    info["FileNum"] = FileNum;
+    m->setHead(srcID, SERVERID, FILETRANSFERGROUP, SENDUSERFILEENDACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg)
 {
     auto m = Message::CreateObject();

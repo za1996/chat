@@ -125,6 +125,7 @@ void ChatWindow::Inithandle()
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, RESTRANSFERFILEACTION), std::bind(&ChatWindow::SendFileOrClose, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERFILEENDACTION), std::bind(&ChatWindow::RecvFileEnd, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, TRANSFERFILECONTINUE), std::bind(&ChatWindow::SendFileCountinue, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(TRANSFERDATAGROUP, REQFORCECLOSEFILEACTION), std::bind(&ChatWindow::RemoteForceCloseFile, this, std::placeholders::_1));
 
 }
 
@@ -278,6 +279,7 @@ void ChatWindow::AddFileTransferItem(uint64_t FileNum, bool isUpload, int FileSi
     m_FileTransferInfo->setItemWidget(item, fitem);
     m_FileTransferItemMap.insert(FileNum, item);
     connect(fitem, SIGNAL(DownloadFile(uint64_t)), this, SLOT(DownloadFile(uint64_t)));
+    connect(fitem, SIGNAL(CancelFile(uint64_t)), this, SLOT(ForceCloseFile(uint64_t)));
     qDebug() << __FUNCTION__ << " FileSize: " << FileSize;
     fitem->show();
 }
@@ -467,6 +469,34 @@ void ChatWindow::DownloadFile(uint64_t FileNum)
 }
 
 
+void ChatWindow::ForceCloseFile(uint64_t FileNum)
+{
+    auto it = m_FileTransferItemMap.find(FileNum);
+    if(it != m_FileTransferItemMap.end())
+    {
+        FileWidgetItem *item = dynamic_cast<FileWidgetItem *>(m_FileTransferInfo->itemWidget(*it));
+        assert(item != nullptr);
+        if(item)
+        {
+            bool isUpload = item->IsUpload();
+            if(isUpload)
+            {
+                m_ReadySendFile.remove(FileNum);
+                m_MainWin->CloseSendFileNum(FileNum, true);
+
+            }
+            else
+            {
+                m_ReadyDownloadFile.remove(FileNum);
+                m_MainWin->CloseDownloadFileNum(FileNum, true);
+            }
+            auto m = CreateReqForceCloseFileMsg(m_MeId, m_FriendId, 0, FileNum);
+            SendtoRemote(s, m);
+        }
+    }
+}
+
+
 
 //消息处理函数
 void ChatWindow::ReqUdpChatMsgHandle(MessagePtr m)
@@ -547,9 +577,49 @@ void ChatWindow::RecvFileEnd(MessagePtr m)
     if(it != m_FileTransferItemMap.end())
     {
         FileWidgetItem * item = dynamic_cast<FileWidgetItem *>(m_FileTransferInfo->itemWidget(*it));
-        item->TransferOver();
+        item->TransferOver(true);
     }
-    m_MainWin->CloseFileNum(FileNum);
+    m_MainWin->CloseDownloadFileNum(FileNum, false);
+}
+
+void ChatWindow::HandleFileSendedEnd(uint64_t FileNum)
+{
+    auto it = m_FileTransferItemMap.find(FileNum);
+    if(it != m_FileTransferItemMap.end())
+    {
+        FileWidgetItem * item = dynamic_cast<FileWidgetItem *>(m_FileTransferInfo->itemWidget(*it));
+        item->TransferOver(true);
+    }
+}
+
+void ChatWindow::RemoteForceCloseFile(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    uint64_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    qDebug() << __FUNCTION__;
+    auto it = m_FileTransferItemMap.find(FileNum);
+    if(it != m_FileTransferItemMap.end())
+    {
+        qDebug() << "ready delete";
+        FileWidgetItem *item = dynamic_cast<FileWidgetItem *>(m_FileTransferInfo->itemWidget(*it));
+        assert(item != nullptr);
+        if(item)
+        {
+            item->TransferOver(false);
+            bool isUpload = item->IsUpload();
+            if(isUpload)
+            {
+                m_ReadySendFile.remove(FileNum);
+                m_MainWin->CloseSendFileNum(FileNum, true);
+
+            }
+            else
+            {
+                m_ReadyDownloadFile.remove(FileNum);
+                m_MainWin->CloseDownloadFileNum(FileNum, true);
+            }
+        }
+    }
 }
 
 

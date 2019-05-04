@@ -20,6 +20,10 @@ struct SysMsgCacheItem
         OnlyShow(onlyshow), Finish(finish), isOK(ok), m(msg) {}
 };
 
+
+//FileItem的ID的值：
+//如果上传到服务端 则为上传到那个用户空间的ID 上传到自己的则为自己的ID
+//传输文件则为对方的ID
 struct SendFileItem
 {
     uint64_t RemoteFileNum;

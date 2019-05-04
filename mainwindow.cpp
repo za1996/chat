@@ -9,6 +9,7 @@
 #include "groupiteminfo.h"
 #include "usersgroupinfo.h"
 #include "systemmessagewin.h"
+#include "networkspacewin.h"
 #include <functional>
 #include <iostream>
 
@@ -63,6 +64,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     m_SerachLineEdit = new QLineEdit(m_MainBoard);
     m_ShowFriendsGroupTreeButton = new QPushButton(m_MainBoard);
     m_ShowUsersGroupListButton = new QPushButton(m_MainBoard);
+    m_NetworkSpaceButton = new  QPushButton(m_MainBoard);
     m_GroupMap = new QHash<QString, QTreeWidgetItem *>();
     m_GroupIdMap = new QHash<uint32_t, GroupItemInfoPtr>();
     m_FriendsMap = new QHash<uint32_t, GroupItemInfoPtr>();
@@ -120,6 +122,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 
     m_ShowFriendsGroupTreeButton->setText("好友");
     m_ShowUsersGroupListButton->setText("群组");
+    m_NetworkSpaceButton->setText("网盘");
 
 
     m_SerachLineEdit->resize(m_MainBoard->width(), 30);
@@ -166,6 +169,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 //    connect(&m_UdpSocket, SIGNAL(readyRead()), this, SLOT(UdpRead()));
     connect(m_ShowFriendsGroupTreeButton, SIGNAL(clicked(bool)), this, SLOT(ShowFriendsGroupTree()));
     connect(m_ShowUsersGroupListButton, SIGNAL(clicked(bool)), this, SLOT(ShowUserGroupList()));
+    connect(m_NetworkSpaceButton, SIGNAL(clicked(bool)), this, SLOT(ShowNetworkSpaceWin()));
     connect(this, SIGNAL(ReadyChangeProfile(uint32_t,QString)), this, SLOT(ChangeProfile(uint32_t,QString)));
     qDebug() << "TitleBar Height" << m_TitleBar->height() << endl;
 
@@ -246,7 +250,37 @@ void MainWindow::SignalSendFile(uint64_t FileNum)
     m_TcpFile->send(FileNum);
 }
 
-void MainWindow::CloseFileNum(uint64_t FileNum)
+void MainWindow::CloseSendFileNum(uint64_t FileNum, bool force)
+{
+    m_FileNumOpenSendMap.remove(FileNum);
+    auto it = m_SendFileMap.find(FileNum);
+//    assert(it != m_SendFileMap.end());
+    if(it != m_SendFileMap.end())
+    {
+        if(!force)
+        {
+            if(it->FileCode == UPLOADUSERPROFILE)
+            {
+                emit ReadyChangeProfile(it->Id, QString::fromStdString(it->FileName));
+            }
+            else if(it->FileCode == FILEDATATRANSFER)
+            {
+                emit FileTransferEnd(FileNum);
+            }
+            else if(it->FileCode == UPLOADUSERFILE)
+            {
+                emit FileSendToServerEnd(FileNum);
+            }
+            else
+            {
+
+            }
+        }
+        m_SendFileMap.erase(it);
+    }
+}
+
+void MainWindow::CloseDownloadFileNum(uint64_t FileNum, bool force)
 {
     m_FileNumStoreMap.remove(FileNum);
 //    auto fit = m_FileNumStoreMap.find(FileNum);
@@ -258,12 +292,19 @@ void MainWindow::CloseFileNum(uint64_t FileNum)
 //    }
 //    m_FileNumStoreMap.erase(fit);
     auto it = m_DowloadFileMap.find(FileNum);
-    assert(it != m_DowloadFileMap.end());
+//    assert(it != m_DowloadFileMap.end());
     if(it != m_DowloadFileMap.end())
     {
-        if(it->FileCode == DOWNLOADUSERPROFILE)
+        if(!force)
         {
-            emit ReadyChangeProfile(it->Id, QString("%1%2").arg(QString::fromStdString(it->LocalPath)).arg(QString::fromStdString(it->Name)));
+            if(it->FileCode == DOWNLOADUSERPROFILE)
+            {
+                emit ReadyChangeProfile(it->Id, QString("%1%2").arg(QString::fromStdString(it->LocalPath)).arg(QString::fromStdString(it->Name)));
+            }
+        }
+        else
+        {
+            QFile::remove(QString("%1%2").arg(QString::fromStdString(it->LocalPath)).arg(QString::fromStdString(it->Name)));
         }
         m_DowloadFileMap.erase(it);
     }
@@ -703,7 +744,7 @@ void MainWindow::DownloadFileEnd(MessagePtr m)
     qDebug() << __FUNCTION__;
     json info = json::parse((char *)m->data());
     uint64_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
-    CloseFileNum(FileNum);
+    CloseDownloadFileNum(FileNum, false);
 }
 
 void MainWindow::AddNewUsersGroup(MessagePtr m)
@@ -785,6 +826,11 @@ void MainWindow::AddRemoteNewUsersGroup(MessagePtr m)
     AddUsersGroupItem(GroupId, GroupName, GroupDesc, GroupProfile, AdminId == m_UserId);
 
     //更新头像
+}
+
+void MainWindow::HandleResSendToFileServer(MessagePtr m)
+{
+    emit ResSendToServer(m);
 }
 
 void MainWindow::SignalTest()
@@ -895,6 +941,7 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESUPLOADDATACOUNTCODE), std::bind(&MainWindow::SendFileNumDataContinue, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADFILESOPENCODE), std::bind(&MainWindow::DownloadFileData, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADFILEENDCODE), std::bind(&MainWindow::DownloadFileEnd, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREDAYSENDUSERFILECODE), std::bind(&MainWindow::HandleResSendToFileServer, this, std::placeholders::_1));
 }
 
 
@@ -920,6 +967,10 @@ void MainWindow::UpdatePos()
     m_ShowUsersGroupListButton->resize(m_ShowFriendsGroupTreeButton->size());
     m_ShowFriendsGroupTreeButton->show();
     m_ShowUsersGroupListButton->show();
+
+    m_NetworkSpaceButton->resize(40, 40);
+    m_NetworkSpaceButton->move(0, m_MainBoard->height() - m_NetworkSpaceButton->height());
+    m_NetworkSpaceButton->show();
 }
 
 QImage MainWindow::MatToQImage(cv::Mat &mtx)
@@ -1082,6 +1133,7 @@ void MainWindow::CreateChatWindow(uint32_t FriendId)
         connect(w, SIGNAL(ChatWindowUdpChatEnd(uint32_t)), this, SLOT(RemoveUdpChatFriend(uint32_t)));
         connect(this, SIGNAL(FileDataBlockSend(uint64_t,uint32_t,int,int)), w, SLOT(HandleSendOrRecvSignal(uint64_t,uint32_t,int,int)));
         connect(this, SIGNAL(FileDataBlockRecv(uint64_t,uint32_t,int,int)), w, SLOT(HandleSendOrRecvSignal(uint64_t,uint32_t,int,int)));
+        connect(this, SIGNAL(FileTransferEnd(uint64_t)), w, SLOT(HandleFileSendedEnd(uint64_t)));
         m_FriendsChatMap.insert(FriendId, w);
         w->SetDelHandle(std::bind(&MainWindow::DelChatWindow, this, std::placeholders::_1));
         w->show();
@@ -1547,6 +1599,15 @@ void MainWindow::WantToJoinInOtherGroup()
         QMessageBox message(QMessageBox::NoIcon, "message", tr("申请群组请求"));
         message.open();
     }
+}
+
+void MainWindow::ShowNetworkSpaceWin()
+{
+    NetworkSpaceWin *w = new NetworkSpaceWin();
+    connect(this, SIGNAL(FileDataBlockSend(uint64_t,uint32_t,int,int)), w, SLOT(HandleSendOrRecvSignal(uint64_t,uint32_t,int,int)));
+    connect(this, SIGNAL(ResSendToServer(MessagePtr)), w, SLOT(HandleReqSendMessage(MessagePtr)));
+    connect(this, SIGNAL(FileSendToServerEnd(uint64_t)), w, SLOT(HandleSendFileEnd(uint64_t)));
+    w->show();
 }
 
 //void MainWindow::UdpSend()

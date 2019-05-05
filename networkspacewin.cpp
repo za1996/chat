@@ -5,6 +5,8 @@
 #include "mainwindow.h"
 #include <QFileDialog>
 
+uint64_t NetworkSpaceWin::LocalFileNum = 0;
+
 NetworkSpaceWin::NetworkSpaceWin(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::NetworkSpaceWin)
@@ -25,11 +27,19 @@ NetworkSpaceWin::NetworkSpaceWin(QWidget *parent) :
     m_TitleBar->setMargins(5, 0, 0, 0);
     m_TitleBar->loadStyleSheet("D:/titlebarstyle.css");
     m_TitleBar->setTitleContent("网络空间", 15);
+
+    m_RefreshFiles = new QAction(tr("&刷新"), ui->FileListWidget);
+    ui->FileListWidget->addAction(m_RefreshFiles);
+    ui->FileListWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
     ui->FileListWidget->raise();
     connect(ui->TransferInfoButton, SIGNAL(clicked(bool)), this, SLOT(ShowTransferInfo()));
     connect(ui->SpaceButton, SIGNAL(clicked(bool)), this, SLOT(ShowUserNetworkSpace()));
     connect(ui->UploadButton, SIGNAL(clicked(bool)), this, SLOT(SendFileToServer()));
     connect(m_TitleBar, SIGNAL(signalButtonCloseClicked()), this, SLOT(close()));
+    connect(m_RefreshFiles, SIGNAL(triggered(bool)), this, SLOT(RefreshFileInfo()));
+    connect(ui->DownloadButton, SIGNAL(clicked(bool)), this, SLOT(DownloadFileByServer()));
+
+    RefreshFileInfo();
 
 }
 
@@ -50,13 +60,12 @@ void NetworkSpaceWin::ShowUserNetworkSpace()
 
 void NetworkSpaceWin::SendFileToServer()
 {
-    static uint64_t LocalFileNum = 0;
     QString FullPath = QFileDialog::getOpenFileName(this, tr("选择文件"), "C:");
     if(!FullPath.isEmpty())
     {
         QFileInfo info(FullPath);
         m_ReadySendFile.insert(LocalFileNum, info);
-        auto m = CreateReadySendUserFileToServerMsg(m_ThisIsId, 0, LocalFileNum, info.fileName().toStdString(), UPLOADUSERFILE, m_ThisIsId);
+        auto m = CreateReadySendOrDownloadUserFileMsg(m_ThisIsId, 0, LocalFileNum, info.fileName().toStdString(), UPLOADUSERFILE, m_ThisIsId);
         SendtoRemote(s, m);
         qDebug() << "send readysendfile";
         LocalFileNum++;
@@ -100,7 +109,7 @@ void NetworkSpaceWin::HandleSendOrRecvSignal(uint64_t FileNum, uint32_t Id, int 
 {
     qDebug() << __FUNCTION__;
     qDebug() << "id : " << Id << " FileCode : " << (FileCode == FILEDATATRANSFER) << " File Size : " << Size;
-    if(Id == m_ThisIsId && (FileCode == UPLOADUSERFILE))
+    if(Id == m_ThisIsId && (FileCode == UPLOADUSERFILE || FileCode == DOWNLOADUSERFILE))
     {
         auto it = m_FileTransferItemMap.find(FileNum);
         if(it != m_FileTransferItemMap.end())
@@ -122,5 +131,61 @@ void NetworkSpaceWin::HandleSendFileEnd(uint64_t FileNum)
     {
         FileWidgetItem * item = dynamic_cast<FileWidgetItem *>(ui->TransferInfoListWidget->itemWidget(*it));
         item->TransferOver(true);
+    }
+}
+
+void NetworkSpaceWin::RefreshFileInfo()
+{
+    auto m = CreateReqFilesInfoMsg(m_ThisIsId, 0);
+    SendtoRemote(s, m);
+}
+
+void NetworkSpaceWin::ShowFilesInfo(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    info = info["Files"];
+    ui->FileListWidget->clear();
+    for(int i = 0; i < info.size(); ++i)
+    {
+        QLabel *litem = new QLabel();
+        QListWidgetItem *item = new QListWidgetItem(ui->FileListWidget);
+        litem->setText(QString::fromStdString(info[i]["FileName"].get<std::string>()));
+        ui->FileListWidget->addItem(item);
+        ui->FileListWidget->setItemWidget(item, litem);
+    }
+}
+
+void NetworkSpaceWin::DownloadFileByServer()
+{
+    auto item = ui->FileListWidget->currentItem();
+    QLabel *label = dynamic_cast<QLabel *>(ui->FileListWidget->itemWidget(item));
+    if(label)
+    {
+        QString FullPath = QString("%1/%2/%3/%4").arg(CACHEPATH).arg(m_ThisIsId).arg("recvfile").arg(label->text());
+        QFileInfo info(FullPath);
+        m_ReadyDownloadFile.insert(LocalFileNum, info);
+        auto m = CreateReadySendOrDownloadUserFileMsg(m_ThisIsId, 0, LocalFileNum, info.fileName().toStdString(), DOWNLOADUSERFILE, m_ThisIsId);
+        SendtoRemote(s, m);
+        qDebug() << "send readysendfile";
+        LocalFileNum++;
+    }
+}
+
+void NetworkSpaceWin::HandleReqRecvMessage(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    uint64_t LocalNum = info["ClientFileNum"].get<json::number_unsigned_t>();
+    uint64_t FileNum = info["FileNum"].get<json::number_unsigned_t>();
+    int Size = info["Length"].get<int>();
+    qDebug() << __FUNCTION__ << " FileNum" << FileNum;
+    auto it = m_ReadyDownloadFile.find(LocalNum);
+    if(it != m_ReadyDownloadFile.end())
+    {
+        qDebug() << "ready download";
+        qDebug() << "path : " << it->absoluteDir();
+        DowloadFileItem item(FileNum, m_ThisIsId, Size, DOWNLOADUSERFILE, it->fileName().toStdString(), it->absoluteDir().path().toStdString() + "/");
+        AddFileTransferItem(FileNum, false, Size, it->fileName());
+        m_MainWin->AddDownloadFile(FileNum, item);
+        m_ReadyDownloadFile.erase(it);
     }
 }

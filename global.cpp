@@ -449,7 +449,7 @@ MessagePtr CreateReqForceCloseFileMsg(uint32_t srcID, uint32_t destId, uint32_t 
     return m;
 }
 
-MessagePtr CreateReadySendUserFileToServerMsg(uint32_t srcID, uint32_t flag, uint64_t ClientFileNum, std::string FileName, int FileCode, uint32_t id)
+MessagePtr CreateReadySendOrDownloadUserFileMsg(uint32_t srcID, uint32_t flag, uint64_t ClientFileNum, std::string FileName, int FileCode, uint32_t id)
 {
     auto m = Message::CreateObject();
     json info;
@@ -469,6 +469,13 @@ MessagePtr CreateSendUserFileToServerEndMsg(uint32_t srcID, uint32_t flag, uint6
     info["FileNum"] = FileNum;
     m->setHead(srcID, SERVERID, FILETRANSFERGROUP, SENDUSERFILEENDACTION, flag);
     m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateReqFilesInfoMsg(uint32_t srcID, uint32_t flag)
+{
+    auto m = Message::CreateObject();
+    m->setHead(srcID, SERVERID, REQINFOGROUP, REQUSERFILESINFOACTION, flag);
     return m;
 }
 

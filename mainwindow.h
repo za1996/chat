@@ -153,6 +153,7 @@ private:
     void RemoteUserReqJoinInGroup(MessagePtr);
     void AddRemoteNewUsersGroup(MessagePtr);
     void HandleResSendToFileServer(MessagePtr);
+    void ResUserFilesInfo(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -171,7 +172,9 @@ signals:
     void ReadyChangeProfile(uint32_t, QString);
     void FileTransferEnd(uint64_t);
     void ResSendToServer(MessagePtr);
-    void FileSendToServerEnd(uint64_t);
+    void UserFileSendOrDownloadEnd(uint64_t);
+    void NetworkSpaceRefresh(MessagePtr);
+    void ResRecvFromServer(MessagePtr);
 
 private slots:
     void onGroupItemClick(QTreeWidgetItem *pitem, int col);

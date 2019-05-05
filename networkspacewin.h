@@ -24,7 +24,10 @@ private:
     Ui::NetworkSpaceWin *ui;
     TitleBar *m_TitleBar;
     QHash<uint64_t, QFileInfo> m_ReadySendFile;
+    QHash<uint64_t, QFileInfo> m_ReadyDownloadFile;
     QHash<uint64_t, QListWidgetItem*> m_FileTransferItemMap;
+    QAction *m_RefreshFiles;
+    static uint64_t LocalFileNum;
 
 private:
     void AddFileTransferItem(uint64_t FileNum, bool isUpload, int FileSize, const QString& FileName);
@@ -33,11 +36,16 @@ private slots:
     void ShowTransferInfo();
     void ShowUserNetworkSpace();
     void SendFileToServer();
+    void RefreshFileInfo();
+    void DownloadFileByServer();
 
 public slots:
     void HandleReqSendMessage(MessagePtr);
     void HandleSendOrRecvSignal(uint64_t, uint32_t, int, int);
     void HandleSendFileEnd(uint64_t);
+    void ShowFilesInfo(MessagePtr);
+    void HandleReqRecvMessage(MessagePtr);
+
 };
 
 #endif // NETWORKSPACEWIN_H

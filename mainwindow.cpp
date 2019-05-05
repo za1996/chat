@@ -269,7 +269,7 @@ void MainWindow::CloseSendFileNum(uint64_t FileNum, bool force)
             }
             else if(it->FileCode == UPLOADUSERFILE)
             {
-                emit FileSendToServerEnd(FileNum);
+                emit UserFileSendOrDownloadEnd(FileNum);
             }
             else
             {
@@ -300,6 +300,10 @@ void MainWindow::CloseDownloadFileNum(uint64_t FileNum, bool force)
             if(it->FileCode == DOWNLOADUSERPROFILE)
             {
                 emit ReadyChangeProfile(it->Id, QString("%1%2").arg(QString::fromStdString(it->LocalPath)).arg(QString::fromStdString(it->Name)));
+            }
+            else if(it->FileCode == DOWNLOADUSERFILE)
+            {
+                emit UserFileSendOrDownloadEnd(FileNum);
             }
         }
         else
@@ -830,7 +834,25 @@ void MainWindow::AddRemoteNewUsersGroup(MessagePtr m)
 
 void MainWindow::HandleResSendToFileServer(MessagePtr m)
 {
-    emit ResSendToServer(m);
+    json info = json::parse((char *)m->data());
+    int FileCode = info["FileCode"].get<int>();
+    if(FileCode == UPLOADUSERFILE)
+    {
+        emit ResSendToServer(m);
+    }
+    else if(FileCode == DOWNLOADUSERFILE)
+    {
+        emit ResRecvFromServer(m);
+    }
+    else
+    {
+
+    }
+}
+
+void MainWindow::ResUserFilesInfo(MessagePtr m)
+{
+    emit NetworkSpaceRefresh(m);
 }
 
 void MainWindow::SignalTest()
@@ -917,6 +939,7 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESINFOGROUP, RESUSERINFOCODE), std::bind(&MainWindow::ShowUserInfo, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESINFOGROUP, RESUSERSGROUPINFOCODE), std::bind(&MainWindow::ShowUsersGroupInfo, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESINFOGROUP, RESUSERSGROUPMEMBERCODE), std::bind(&MainWindow::ShowUsersGroupMemberList, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESINFOGROUP, RESUSERFILESINFOCODE), std::bind(&MainWindow::ResUserFilesInfo, this, std::placeholders::_1));
 
 
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESCHANGEFRIENDOTHERNAMECODE), std::bind(&MainWindow::ChangeUserName, this, std::placeholders::_1));
@@ -941,7 +964,7 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESUPLOADDATACOUNTCODE), std::bind(&MainWindow::SendFileNumDataContinue, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADFILESOPENCODE), std::bind(&MainWindow::DownloadFileData, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREADFILEENDCODE), std::bind(&MainWindow::DownloadFileEnd, this, std::placeholders::_1));
-    m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREDAYSENDUSERFILECODE), std::bind(&MainWindow::HandleResSendToFileServer, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESFILETRANSDERINFOGROUP, RESREDAYSENDORDOWNLOADUSERFILECODE), std::bind(&MainWindow::HandleResSendToFileServer, this, std::placeholders::_1));
 }
 
 
@@ -1606,7 +1629,10 @@ void MainWindow::ShowNetworkSpaceWin()
     NetworkSpaceWin *w = new NetworkSpaceWin();
     connect(this, SIGNAL(FileDataBlockSend(uint64_t,uint32_t,int,int)), w, SLOT(HandleSendOrRecvSignal(uint64_t,uint32_t,int,int)));
     connect(this, SIGNAL(ResSendToServer(MessagePtr)), w, SLOT(HandleReqSendMessage(MessagePtr)));
-    connect(this, SIGNAL(FileSendToServerEnd(uint64_t)), w, SLOT(HandleSendFileEnd(uint64_t)));
+    connect(this, SIGNAL(ResRecvFromServer(MessagePtr)), w, SLOT(HandleReqRecvMessage(MessagePtr)));
+    connect(this, SIGNAL(UserFileSendOrDownloadEnd(uint64_t)), w, SLOT(HandleSendFileEnd(uint64_t)));
+    connect(this, SIGNAL(NetworkSpaceRefresh(MessagePtr)), w, SLOT(ShowFilesInfo(MessagePtr)));
+    connect(this, SIGNAL(FileDataBlockRecv(uint64_t,uint32_t,int,int)), w, SLOT(HandleSendOrRecvSignal(uint64_t,uint32_t,int,int)));
     w->show();
 }
 

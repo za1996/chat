@@ -15,6 +15,8 @@ using json = nlohmann::json;
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist);
 bool SendtoRemote(QTcpSocket &s, MessagePtr m);
 bool WaitForRead(QTcpSocket &s, std::list<MessagePtr> &mlist, const int count);
+void UpdateProfileToDatabase(uint32_t id, const QString &FileName);
+void SaveChatMessageToDatabase(uint32_t Src, uint32_t Dest, const QString& msg);
 QString UserProfileCachePath(uint32_t id, const QString &FileName);
 MessagePtr CreateReqUserInfoMsg(uint32_t reqID, uint32_t srcID, uint32_t flag);
 MessagePtr CreateChangeUserNameMsg(uint32_t changeID, const QString &Name, uint32_t srcID, uint32_t flag);

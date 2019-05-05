@@ -6,6 +6,8 @@
 #include <vector>
 #include <QtNetwork>
 #include <QAbstractSocket>
+#include <QSqlQuery>
+#include <QSqlError>
 
 
 
@@ -26,6 +28,30 @@ QVector<SysMsgCacheItem> m_SysMsgCache;
 uint32_t m_ThisIsId;
 uint64_t GlobalFileNum = 0xf0000000;
 QSqlDatabase db;
+
+void UpdateProfileToDatabase(uint32_t id, const QString &FileName)
+{
+    QString error_tip  = "%1:[%2]%3";
+    QSqlQuery db_operator(db);
+    QString insert_sql = "INSERT OR REPLACE INTO User(Id, Profile) VALUES(%1, '%2');";
+    if(!db_operator.exec(insert_sql.arg(id).arg(FileName)))
+    {
+        qDebug() << error_tip.arg("insert failed").arg(db_operator.lastError().type()).arg(db_operator.lastError().text());
+    }
+    db.commit();
+}
+
+void SaveChatMessageToDatabase(uint32_t Src, uint32_t Dest, const QString& msg)
+{
+    QString error_tip  = "%1:[%2]%3";
+    QSqlQuery db_operator(db);
+    QString insert_sql = "INSERT INTO ChatInfo(Sender, Recvicer, Message) VALUES(%1, %2, '');";
+    if(!db_operator.exec(insert_sql.arg(Src).arg(Dest).arg(msg)))
+    {
+        qDebug() << error_tip.arg("insert failed").arg(db_operator.lastError().type()).arg(db_operator.lastError().text());
+    }
+    db.commit();
+}
 
 
 QString UserProfileCachePath(uint32_t id, const QString &FileName)

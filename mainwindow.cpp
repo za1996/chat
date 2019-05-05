@@ -1283,6 +1283,7 @@ bool MainWindow::InitMySelf()
         m_Me = GroupItemInfo::CreateObject(Name, m_UserId, Desc, "", Profile, Sex, 0, 1);
         m_UserName->setText(Name);
         m_UserDesc->setText(Desc);
+        UpdateProfileToDatabase(m_UserId, Profile);
         QString FullPath = UserProfileCachePath(m_UserId, Profile);
         if(!Profile.isEmpty() && QFileInfo(FullPath).isFile())
         {
@@ -1667,7 +1668,9 @@ void MainWindow::ChangeProfile(uint32_t Id, QString FullPath)
 {
     if(m_UserId == Id)
     {
-        m_Me->setProfile(FullPath.split('/').last());
+        QString FileName = FullPath.split('/').last();
+        UpdateProfileToDatabase(Id, FileName);
+        m_Me->setProfile(FileName);
         m_Profile->setPixmap(QPixmap::fromImage(QImage(FullPath)).scaled(m_Profile->size()));
     }
 }

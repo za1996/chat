@@ -41,9 +41,9 @@ private:
 private slots:
     void onCloseButtonClicked();
     void onMinButtonClicked();
-    void onShowAccountInfo(QString filePath, QString accountName);
+    void onShowAccountInfo(QString filePath, QString accountName, QString Password);
     void onLoginIn();
-    void onRemoveAccount(int m_item);
+    void onRemoveAccount(void *item);
     void onLoginRes();
     void onRegister();
     void onFindPassword();

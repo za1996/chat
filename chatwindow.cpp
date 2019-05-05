@@ -364,6 +364,7 @@ void ChatWindow::SendChatWordMessage()
         uint64_t time = QDateTime::currentDateTime().toMSecsSinceEpoch();
         auto m = CreateChatWordMsg(m_FriendId, m_MeId, TRANSFERCHATDATAACTION, 0, slist[0].toStdString(), time);
         SendtoRemote(s, m);
+        SaveChatMessageToDatabase(m_MeId, m_FriendId, slist[0]);
         QListWidgetItem *item = new QListWidgetItem(ui->MsgList);
         ChatWindowMessageItem *mItem = new ChatWindowMessageItem(nullptr, true, time, slist[0], ui->MsgList->width());
         qDebug() << "msg : " << slist[0];

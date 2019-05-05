@@ -14,7 +14,7 @@ public:
     AccountItem(QWidget *parent = nullptr);
 
 public:
-    void setAccountInfo(int index, QString accountName, QString headFilePath);
+    void setAccountInfo(void *item, const QString& accountName, const QString& headFilePath, const QString& Password);
     QString getAccountName();
 public slots:
     void onRemoveAccount() ;
@@ -25,16 +25,17 @@ private:
     QString getHeadImageDirPath();
 
 Q_SIGNALS:
-    void signalShowAccountInfo(QString headPicPath , QString accountName);
-    void signalRemoveAccount(int index) ;
+    void signalShowAccountInfo(QString headPicPath , QString accountName, QString Password);
+    void signalRemoveAccount(void *) ;
 
 private:
     bool m_mousePress;
     QLabel *m_accountNumber;
     QToolButton *m_deleteButton;
     QLabel *m_Icon;
-    int m_index;
+    void *m_item;
     QString filePath;
+    QString m_Password;
 };
 
 

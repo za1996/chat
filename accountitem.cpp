@@ -28,12 +28,13 @@ AccountItem::AccountItem(QWidget *parent)
 }
 
 
-void AccountItem::setAccountInfo(int index , QString accountName, QString headFilePath)
+void AccountItem::setAccountInfo(void *item, const QString& accountName, const QString& headFilePath, const QString& Password)
 {
-    m_index = index;
+    m_item = item;
     m_accountNumber->setText(accountName);
     filePath = headFilePath;
     m_Icon->setPixmap(QPixmap(filePath).scaled(30, 30));
+    m_Password = Password;
 }
 
 QString AccountItem::getAccountName()
@@ -43,7 +44,7 @@ QString AccountItem::getAccountName()
 
 void AccountItem::onRemoveAccount()
 {
-    emit signalRemoveAccount(m_index);
+    emit signalRemoveAccount(m_item);
 }
 
 void AccountItem::mousePressEvent(QMouseEvent *event)
@@ -58,7 +59,7 @@ void AccountItem::mouseReleaseEvent(QMouseEvent *event)
 {
     if(m_mousePress)
     {
-        emit signalShowAccountInfo(filePath , m_accountNumber->text());
+        emit signalShowAccountInfo(filePath , m_accountNumber->text(), m_Password);
         m_mousePress = false;
     }
 }

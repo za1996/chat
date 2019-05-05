@@ -8,12 +8,14 @@
 #include "message.h"
 #include "concurrentqueue.h"
 #include <nlohmann/json.hpp>
+#include <QSqlDatabase>
 using json = nlohmann::json;
 
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist);
 bool SendtoRemote(QTcpSocket &s, MessagePtr m);
 bool WaitForRead(QTcpSocket &s, std::list<MessagePtr> &mlist, const int count);
+QString UserProfileCachePath(uint32_t id, const QString &FileName);
 MessagePtr CreateReqUserInfoMsg(uint32_t reqID, uint32_t srcID, uint32_t flag);
 MessagePtr CreateChangeUserNameMsg(uint32_t changeID, const QString &Name, uint32_t srcID, uint32_t flag);
 MessagePtr CreateAddUserGroupMsg(const QString &UserGroupName, uint32_t srcID, uint32_t flag);
@@ -49,7 +51,9 @@ MessagePtr CreateRegisterAccountMsg(uint32_t flag, const QString &Name, const QS
 MessagePtr CreateReqForceCloseFileMsg(uint32_t srcID, uint32_t destId, uint32_t flag, uint64_t FileNum);
 MessagePtr CreateReadySendOrDownloadUserFileMsg(uint32_t srcID, uint32_t flag, uint64_t ClientFileNum, std::string FileName, int FileCode, uint32_t id);
 MessagePtr CreateSendUserFileToServerEndMsg(uint32_t srcID, uint32_t flag, uint64_t FileNum);
+MessagePtr CreateReqFriendsStateMsg(uint32_t srcID, uint32_t flag);
 MessagePtr CreateReqFilesInfoMsg(uint32_t srcID, uint32_t flag);
+MessagePtr CreateFindPasswordMsg(uint32_t flag, uint32_t UserId, const std::string& Answer);
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg);
 
 typedef std::shared_ptr<UdpPacket> UdpPacketPtr;
@@ -71,6 +75,7 @@ extern QHash<uint64_t, std::shared_ptr<QFile>> m_FileNumOpenSendMap;
 extern uint32_t m_ThisIsId;
 extern uint64_t GlobalFileNum;
 extern QVector<SysMsgCacheItem> m_SysMsgCache;
+extern QSqlDatabase db;
 //#define UDP_MAX_SIZE 14336
 #define UDP_MAX_SIZE 1436
 #define UDP_MAX_DELAY 200

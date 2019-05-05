@@ -25,6 +25,13 @@ QHash<uint64_t, std::shared_ptr<QFile>> m_FileNumOpenSendMap;
 QVector<SysMsgCacheItem> m_SysMsgCache;
 uint32_t m_ThisIsId;
 uint64_t GlobalFileNum = 0xf0000000;
+QSqlDatabase db;
+
+
+QString UserProfileCachePath(uint32_t id, const QString &FileName)
+{
+    return QString("%1/%2/%3/%4").arg(CACHEPATH).arg(id).arg("profile").arg(FileName);
+}
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist)
 {
@@ -476,6 +483,24 @@ MessagePtr CreateReqFilesInfoMsg(uint32_t srcID, uint32_t flag)
 {
     auto m = Message::CreateObject();
     m->setHead(srcID, SERVERID, REQINFOGROUP, REQUSERFILESINFOACTION, flag);
+    return m;
+}
+
+MessagePtr CreateReqFriendsStateMsg(uint32_t srcID, uint32_t flag)
+{
+    auto m = Message::CreateObject();
+    m->setHead(srcID, SERVERID, REQINFOGROUP, REQFRIENDSSTATEACTION, flag);
+    return m;
+}
+
+MessagePtr CreateFindPasswordMsg(uint32_t flag, uint32_t UserId, const std::string& Answer)
+{
+    json info;
+    info["UserId"] = UserId;
+    info["Answer"] = Answer;
+    auto m = Message::CreateObject();
+    m->setHead(REQID, SERVERID, LOGINEVENTGROUP, REQFINDPASSWORDACTION, flag);
+    m->setData(info.dump());
     return m;
 }
 

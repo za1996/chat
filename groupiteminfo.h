@@ -17,19 +17,19 @@ public:
 
     static GroupItemInfoPtr CreateGroupItem(const QString &Name, const uint32_t &Id)
     {
-        GroupItemInfoPtr obj(new GroupItemInfo(Name, Id, "", "", "", 0, 0, true));
+        GroupItemInfoPtr obj(new GroupItemInfo(Name, Id, "", "", "", 0, 0, -1, true));
         return obj->shared_from_this();
     }
 
-    static GroupItemInfoPtr CreateItem(const QString &Name, const uint32_t &Id, const QString &Desc, const QString &OtherName, const QString &Profile, const int &Sex, const uint32_t &GroupId)
+    static GroupItemInfoPtr CreateItem(const QString &Name, const uint32_t &Id, const QString &Desc, const QString &OtherName, const QString &Profile, const int &Sex, const uint32_t &GroupId, int State)
     {
-        GroupItemInfoPtr obj(new GroupItemInfo(Name, Id, Desc, OtherName, Profile, Sex, GroupId, false));
+        GroupItemInfoPtr obj(new GroupItemInfo(Name, Id, Desc, OtherName, Profile, Sex, GroupId, State, false));
         return obj->shared_from_this();
     }
 
-    static GroupItemInfoPtr CreateObject(const QString &Name, const uint32_t &Id, const QString &Desc, const QString &OtherName, const QString &Profile, const int &Sex, const uint32_t GroupId, const bool &IsFriendsGroup = false)
+    static GroupItemInfoPtr CreateObject(const QString &Name, const uint32_t &Id, const QString &Desc, const QString &OtherName, const QString &Profile, const int &Sex, const uint32_t GroupId, int State, const bool &IsFriendsGroup = false)
     {
-        GroupItemInfoPtr obj(new GroupItemInfo(Name, Id, Desc, OtherName, Profile, Sex, GroupId, IsFriendsGroup));
+        GroupItemInfoPtr obj(new GroupItemInfo(Name, Id, Desc, OtherName, Profile, Sex, GroupId, State, IsFriendsGroup));
         return obj->shared_from_this();
     }
     static GroupItemInfoPtr CreateObject()
@@ -47,6 +47,7 @@ public:
     uint32_t getGroupId() { return m_GroupId; }
     bool IsFriendsGroup() { return m_IsFriendsGroup; }
     int getSex() { return m_Sex; }
+    int getState() { return m_State; }
 
     void setName(QString Name) { m_Name = Name; }
     void setId(uint32_t Id) { m_Id = Id; }
@@ -54,6 +55,7 @@ public:
     void setDesc(QString Desc) { m_Desc = Desc; }
     void setProfile(QString Profile) { m_Profile = Profile; }
     void setSex(int Sex) { m_Sex = Sex; }
+    void setState(int state) { m_State = state; }
 
     void addFriend(uint32_t Id);
     void delFriend(uint32_t Id);
@@ -62,7 +64,7 @@ public:
 
 private:
     GroupItemInfo();
-    GroupItemInfo(const QString &Name, const uint32_t &Id, const QString &Desc, const QString &OtherName, const QString &Profile, const int &Sex, const uint32_t GroupId, const bool &IsFriendsGroup = false);
+    GroupItemInfo(const QString &Name, const uint32_t &Id, const QString &Desc, const QString &OtherName, const QString &Profile, const int &Sex, const uint32_t GroupId, int State, const bool &IsFriendsGroup = false);
     QString m_Name;
     uint32_t m_Id;
     QString m_OtherName;
@@ -70,6 +72,7 @@ private:
     QString m_Profile;
     bool m_IsFriendsGroup;
     int m_Sex;
+    int m_State;
     uint32_t m_GroupId;
     std::list<uint32_t> *m_FriendsList;
 };

@@ -36,6 +36,8 @@ private slots:
     void SelectFile();
     void UploadImg();
     void ReadImg();
+
+
 };
 
 #endif // PROFILEUPLOADWIN_H

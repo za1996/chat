@@ -6,7 +6,7 @@
 #include <QAction>
 #include <QDebug>
 
-GroupItem::GroupItem(QWidget *parent, void *item, uint32_t Id) : QWidget(parent)
+GroupItem::GroupItem(QWidget *parent, void *item, uint32_t Id) : QWidget(parent), m_UserId(Id)
 {
     this->setMinimumSize(240, HEIGHT + 10);
     this->setMaximumHeight(HEIGHT + 10);
@@ -91,6 +91,15 @@ QBitmap GroupItem::createEllipseMask(const QSize &size, const QPoint &point, con
     return mask;
 }
 
+//public slots
+void GroupItem::ChangeProfile(uint32_t id, const QString &FullPath)
+{
+    if(id == m_UserId)
+    {
+        m_Profile->setPixmap(QPixmap::fromImage(QImage(FullPath)).scaled(m_Profile->size()));
+    }
+}
+
 
 //public function
 void GroupItem::setProfile(const QString &profile)
@@ -101,6 +110,7 @@ void GroupItem::setProfile(const QString &profile)
 void GroupItem::setName(const QString &name)
 {
     m_Name->setText(name);
+    m_NameString = name;
 }
 
 void GroupItem::setDesc(const QString &desc)
@@ -127,6 +137,13 @@ void GroupItem::setMessageCount(const int count)
     }
     m_MsgCount->setText(text);
     m_MsgCount->show();
+}
+
+void GroupItem::setState(int state)
+{
+    if(state < 0 || state > 2) return;
+    static QString State[2] = {"(离线)", "(在线)"};
+    m_Name->setText(m_NameString + State[state]);
 }
 
 void GroupItem::hideDateLabel()

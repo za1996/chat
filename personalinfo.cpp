@@ -33,7 +33,12 @@ PersonalInfo::PersonalInfo(QWidget *parent, const QString &Name, uint32_t id, in
     ui->SexComboBox->addItems(strList);
 
     ui->Profile->installEventFilter(this);
-
+    QString FullPath = UserProfileCachePath(id, Profile);
+    if(!QFileInfo(FullPath).isFile())
+    {
+        FullPath = "D:/imggggg.bmp";
+    }
+    ui->Profile->setPixmap(QPixmap::fromImage(QImage(FullPath)).scaled(ui->Profile->size()));
     ui->NameLineEdit->setText(Name);
     ui->NumLabel->setText(QString::number(id));
     ui->DescPlainTextEdit->setPlainText(Desc);
@@ -121,4 +126,12 @@ bool PersonalInfo::eventFilter(QObject *watched, QEvent *event)
         }
     }
     this->QWidget::eventFilter(watched, event);
+}
+
+void PersonalInfo::ChangeProfile(uint32_t id, const QString &FileName)
+{
+    if(id == m_ThisIsId)
+    {
+        ui->Profile->setPixmap(QPixmap::fromImage(QImage(FileName)).scaled(ui->Profile->size()));
+    }
 }

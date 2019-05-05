@@ -98,7 +98,7 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, const QString &Name, QWid
     connect(&m_ShowVideoTimer, SIGNAL(timeout()), this, SLOT(ShowVideoInfo()));
     connect(ui->SendButton, SIGNAL(clicked(bool)), this, SLOT(SendChatWordMessage()));
     connect(ui->EmoticonButton, SIGNAL(clicked(bool)), this, SLOT(ShowEmotionWidget()));
-    connect(ui->WordButton, SIGNAL(clicked(bool)), this, SLOT(ChangeWordStyle()));
+//    connect(ui->WordButton, SIGNAL(clicked(bool)), this, SLOT(ChangeWordStyle()));
     connect(m_EmotionWidget, SIGNAL(cellClicked(int,int)), this, SLOT(AddEmotion(int, int)));
     connect(ui->FileButton, SIGNAL(clicked(bool)), this, SLOT(ReadySendFile()));
     connect(ui->TransferInfoButton, SIGNAL(clicked(bool)), this, SLOT(OnTransferInfoClick()));
@@ -184,7 +184,7 @@ bool ChatWindow::eventFilter(QObject *target, QEvent *event)
 
 void ChatWindow::moveEvent(QMoveEvent *event)
 {
-    m_EmotionWidget->move(ui->MainBoard->mapToGlobal(QPoint(ui->WordButton->x(), ui->WordButton->y() - m_EmotionWidget->height())));
+    m_EmotionWidget->move(ui->MainBoard->mapToGlobal(QPoint(ui->EmoticonButton->x(), ui->EmoticonButton->y() - m_EmotionWidget->height())));
     QWidget::moveEvent(event);
 }
 
@@ -384,7 +384,7 @@ void ChatWindow::ShowEmotionWidget()
 
 //    if(!m_EmotionWidgetShow)
 //    {
-        QPoint point = ui->MainBoard->mapToGlobal(QPoint(ui->WordButton->x(), ui->WordButton->y() - m_EmotionWidget->height()));
+        QPoint point = ui->MainBoard->mapToGlobal(QPoint(ui->EmoticonButton->x(), ui->EmoticonButton->y() - m_EmotionWidget->height()));
         qDebug() << point;
         m_EmotionWidget->move(point);
         m_EmotionWidget->show();
@@ -619,6 +619,14 @@ void ChatWindow::RemoteForceCloseFile(MessagePtr m)
                 m_MainWin->CloseDownloadFileNum(FileNum, true);
             }
         }
+    }
+}
+
+void ChatWindow::HandleCacheMessage(const std::list<MessagePtr> &mlist)
+{
+    for(auto it = mlist.begin(); it != mlist.end(); ++it)
+    {
+        HandleMessage(m_FriendId, *it);
     }
 }
 

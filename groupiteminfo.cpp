@@ -5,7 +5,7 @@ GroupItemInfo::GroupItemInfo()
 
 }
 
-GroupItemInfo::GroupItemInfo(const QString &Name, const uint32_t &Id, const QString &Desc, const QString &OtherName, const QString &Profile, const int &Sex, const uint32_t GroupId, const bool &IsFriendsGroup) :
+GroupItemInfo::GroupItemInfo(const QString &Name, const uint32_t &Id, const QString &Desc, const QString &OtherName, const QString &Profile, const int &Sex, const uint32_t GroupId, int State, const bool &IsFriendsGroup) :
     m_Name(Name),
     m_Id(Id),
     m_Desc(Desc),
@@ -14,6 +14,7 @@ GroupItemInfo::GroupItemInfo(const QString &Name, const uint32_t &Id, const QStr
     m_Profile(Profile),
     m_Sex(Sex),
     m_GroupId(GroupId),
+    m_State(State),
     m_FriendsList(nullptr)
 {
     if(m_IsFriendsGroup)

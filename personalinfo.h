@@ -30,6 +30,9 @@ private:
     ProfileUploadWin *m_ProfileWin;
 private slots:
     void ChangeMyselfInfo();
+
+public slots:
+    void ChangeProfile(uint32_t, const QString&);
 };
 
 #endif // PERSONALINFO_H

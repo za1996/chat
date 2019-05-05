@@ -17,6 +17,7 @@ public:
     void setDesc(const QString &desc);
     void setDate(const QString &date);
     void setMessageCount(const int count);
+    void setState(int);
     void hideDateLabel();
     void hideMessageCountLabel();
 
@@ -33,6 +34,8 @@ private:
     QAction *m_changeGroup;
     QAction *m_showInfo;
     void *m_item;
+    uint32_t m_UserId;
+    QString m_NameString;
 
     QBitmap createEllipseMask(const QSize &size, const QPoint &point, const int rx, const int ry);
 
@@ -50,6 +53,9 @@ private slots:
     void changeGroup();
     void deleteFriend();
     void showInfo();
+
+public slots:
+    void ChangeProfile(uint32_t, const QString&);
 };
 
 #endif // GROUPITEM_H

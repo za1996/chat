@@ -84,6 +84,7 @@ private:
     UdpRecvicer *m_UdpRecvicer;
     TcpFileThread *m_TcpFile;
     TcpFileRecvicer *m_TcpFileRecvicer;
+    QTimer *m_UpdateFriendState;
 
 
 
@@ -108,7 +109,7 @@ private:
 
 
     void GetFriendsProfile();
-    void AddGroupItem(uint32_t GroupId, uint32_t Id, const QString &Name, const QString &OtherName, const QString &Desc, const QString &Profile, int Sex);
+    void AddGroupItem(uint32_t GroupId, uint32_t Id, const QString &Name, const QString &OtherName, const QString &Desc, const QString &Profile, int Sex, int state);
     void AddGroupItem(uint32_t GroupId, const GroupItemInfoPtr& info);
     void AddUsersGroupItem(uint32_t UsersGroupId, const QString& GroupName, const QString GroupDesc, const QString& GroupProfile, bool);
     void DelGroupItem(uint32_t Id, bool clear = true);
@@ -154,6 +155,8 @@ private:
     void AddRemoteNewUsersGroup(MessagePtr);
     void HandleResSendToFileServer(MessagePtr);
     void ResUserFilesInfo(MessagePtr);
+    void UpdateFriendsState(MessagePtr);
+    void UpdateMyselfInfo(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -202,6 +205,7 @@ private slots:
     void NewUsersGroup();
     void WantToJoinInOtherGroup();
     void ShowNetworkSpaceWin();
+    void ReqFriendsState();
 };
 
 extern MainWindow *m_MainWin;

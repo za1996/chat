@@ -35,6 +35,7 @@ private:
     void showTitleBar();
     void creatShadow(QWidget *widget);
     void loadAccountList();
+    void CreateDatabase();
 
 
 private slots:
@@ -45,6 +46,7 @@ private slots:
     void onRemoveAccount(int m_item);
     void onLoginRes();
     void onRegister();
+    void onFindPassword();
 
 private:
     Ui::LoginWindow *ui;

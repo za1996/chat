@@ -21,6 +21,11 @@
 #include <QtNetwork>
 #include <list>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QSqlDatabase>
+#include <QSqlDriver>
+#include <QSqlError>
+#include <QSqlQuery>
 
 LoginWindow::LoginWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -35,12 +40,35 @@ LoginWindow::LoginWindow(QWidget *parent) :
     creatShadow(ui->headPix);
     loadAccountList();
     this->loadStyleSheet("D:/style.css");
+    CreateDatabase();
 
 }
 
 LoginWindow::~LoginWindow()
 {
     delete ui;
+}
+
+void LoginWindow::CreateDatabase()
+{
+    QString error_tip  = "%1:[%2]%3";
+    db = QSqlDatabase::addDatabase("QSQLITE");
+    db.setDatabaseName("./data_station.db");
+    if(!db.open())
+    {
+        qDebug() << error_tip.arg("open data base 'data_station' failed").arg(db.lastError().type()).arg(db.lastError().text());
+    }
+    QString CreateUserTable = "CREATE TABLE IF NOT EXISTS User(Id INT PRIMARY KEY, Password VARCHAR(255), Profile VARCHAR(255));";
+    QString UserChatInfoTable = "CREATE TABLE IF NOT EXISTS ChatInfo(Id INT PRIMARY KEY, Sender INT, Recvicer INT, Message VARCHAR(255));";
+    QSqlQuery db_operator(db);
+    if(!db_operator.exec(CreateUserTable))
+    {
+        qDebug() << error_tip.arg("create table 'data_list' failed").arg(db_operator.lastError().type()).arg(db_operator.lastError().text());
+    }
+    if(!db_operator.exec(UserChatInfoTable))
+    {
+        qDebug() << error_tip.arg("create table 'data_list' failed").arg(db_operator.lastError().type()).arg(db_operator.lastError().text());
+    }
 }
 
 void LoginWindow::init()
@@ -149,6 +177,7 @@ void LoginWindow::initConnections()
     connect(m_titleBar, SIGNAL(signalButtonMinClicked()), this, SLOT(onMinButtonClicked()));
     connect(ui->loginButton, SIGNAL(clicked(bool)), this, SLOT(onLoginIn()));
     connect(ui->registerAccount, SIGNAL(clicked(bool)), this, SLOT(onRegister()));
+    connect(ui->findPassword, SIGNAL(clicked(bool)), this, SLOT(onFindPassword()));
 }
 
 void LoginWindow::onCloseButtonClicked()
@@ -259,5 +288,45 @@ void LoginWindow::onRegister()
 {
     RegisterWin *w = new RegisterWin();
     w->show();
+}
+
+void LoginWindow::onFindPassword()
+{
+    bool ok;
+    uint32_t Id = QInputDialog::getInt(nullptr, "输入", tr("请输入账号:"), 0, 0, 2147483647, 1, &ok);
+    if(ok)
+    {
+        QString Text = QInputDialog::getText(nullptr, "输入", tr("您父母的姓名:"), QLineEdit::Normal, "", &ok);
+        if(Text.isEmpty())
+        {
+            QMessageBox message(QMessageBox::Question,tr("警告"), tr("不能为空"), QMessageBox::Yes, NULL);
+            message.setWindowFlags(Qt::WindowStaysOnTopHint);
+            message.exec();
+        }
+        else
+        {
+            auto m = CreateFindPasswordMsg(0, Id, Text.toStdString());
+            SendtoRemote(s, m);
+            std::list<MessagePtr> mlist;
+            if(WaitForRead(s, mlist, 1))
+            {
+                m = mlist.front();
+                json info = json::parse((char *)m->data());
+                if(!m->isError())
+                {
+                    QString Text = QString("您的密码:%1").arg(QString::fromStdString(info["Password"].get<std::string>()));
+                    QMessageBox message(QMessageBox::Information, tr("警告"), Text, QMessageBox::Yes, NULL);
+                    message.setWindowFlags(Qt::WindowStaysOnTopHint);
+                    message.exec();
+                }
+                else
+                {
+                    QMessageBox message(QMessageBox::Question, tr("警告"), QString::fromStdString(info["Msg"].get<std::string>()), QMessageBox::Yes, NULL);
+                    message.setWindowFlags(Qt::WindowStaysOnTopHint);
+                    message.exec();
+                }
+            }
+        }
+    }
 }
 

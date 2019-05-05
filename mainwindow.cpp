@@ -149,6 +149,8 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 
     GlobalFileNum |= ((uint64_t)m_UserId << 32);
 
+    m_UpdateFriendState = new QTimer(this);
+
 
 //    m_UdpSocket.setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 1024 * 1024 * 4);
 
@@ -171,6 +173,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     connect(m_ShowUsersGroupListButton, SIGNAL(clicked(bool)), this, SLOT(ShowUserGroupList()));
     connect(m_NetworkSpaceButton, SIGNAL(clicked(bool)), this, SLOT(ShowNetworkSpaceWin()));
     connect(this, SIGNAL(ReadyChangeProfile(uint32_t,QString)), this, SLOT(ChangeProfile(uint32_t,QString)));
+    connect(m_UpdateFriendState, SIGNAL(timeout()), this, SLOT(ReqFriendsState()));
     qDebug() << "TitleBar Height" << m_TitleBar->height() << endl;
 
 //    QTreeWidgetItem *pRootFriendItem = new QTreeWidgetItem();
@@ -340,6 +343,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *ev)
             {
                 PersonalInfo *p = new PersonalInfo(nullptr, m_Me->getName(), m_UserId, m_Me->getSex(), m_Birthday.split(' ')[0], m_Me->getDesc(), m_Me->getProfile(), true);
                 p->show();
+                connect(this,SIGNAL(ReadyChangeProfile(uint32_t,QString)), p, SLOT(ChangeProfile(uint32_t,QString)));
                 return true;
             }
             else
@@ -782,20 +786,25 @@ void MainWindow::ReqAddFriendMsg(MessagePtr m)
 void MainWindow::AddTheNewFriend(MessagePtr m)
 {
     json info = json::parse((char *)m->data());
+    {
+        QDebug q = qDebug();
+        m->operator <<(q);
+    }
     uint32_t FriendId = info["ID"].get<json::number_unsigned_t>();
     uint32_t GroupId = info["GroupId"].get<json::number_unsigned_t>();
     QString FriendName = QString::fromStdString(info["Name"].get<std::string>());
-    QString FriendProfile = QString::fromStdString(info["Name"].get<std::string>());
+    QString FriendProfile = QString::fromStdString(info["Profile"].get<std::string>());
     QString FriendDesc = QString::fromStdString(info["Desc"].get<std::string>());
     int Sex = info["Sex"].get<int>();
+    int State = info["State"].get<int>();
 
+    qDebug() << __FUNCTION__ << " ";
     QString path = QString("%1/%2/%3").arg(CACHEPATH).arg(FriendId).arg("profile");
     CreateDir(path);
     path = QString("%1/%2/%3").arg(CACHEPATH).arg(FriendId).arg("recvfile");
     CreateDir(path);
-
-    AddGroupItem(GroupId, FriendId, FriendName, "", FriendDesc, FriendProfile, Sex);
-
+    qDebug() << __FUNCTION__ << " ";
+    AddGroupItem(GroupId, FriendId, FriendName, "", FriendDesc, FriendProfile, Sex, State);
     //请求头像
 }
 
@@ -855,6 +864,45 @@ void MainWindow::ResUserFilesInfo(MessagePtr m)
     emit NetworkSpaceRefresh(m);
 }
 
+void MainWindow::UpdateFriendsState(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    info = info["Friends"];
+    for(int i = 0; i < info.size(); ++i)
+    {
+        uint32_t id = info[i]["FriendId"].get<json::number_unsigned_t>();
+        int state = info[i]["State"].get<int>();
+        auto info = m_FriendsMap->find(id);
+        if(info != m_FriendsMap->end())
+        {
+            (*info)->setState(state);
+        }
+        auto item = m_FriendsItemMap.find(id);
+        if(item != m_FriendsItemMap.end())
+        {
+           GroupItem *p = dynamic_cast<GroupItem *>(m_GroupTree->itemWidget(*item, 0));
+           if(p)
+           {
+                p->setState(state);
+           }
+        }
+
+    }
+}
+
+void MainWindow::UpdateMyselfInfo(MessagePtr m)
+{
+    json info = json::parse((char *)m->data());
+    QString Name = QString::fromStdString(info["Name"].get<std::string>());
+    QString Desc = QString::fromStdString(info["Desc"].get<std::string>());
+    int Sex = info["Sex"].get<int>();
+    qDebug() << __FUNCTION__ << " Desc " << Desc;
+    m_UserName->setText(Name);
+    m_UserDesc->setText(Desc);
+    m_UserDesc->adjustSize();
+    m_Me = GroupItemInfo::CreateObject(Name, m_UserId, Desc, "", m_Me->getProfile(), Sex, 0, 1);
+}
+
 void MainWindow::SignalTest()
 {
     qDebug() << __FUNCTION__;
@@ -910,7 +958,7 @@ void MainWindow::GetFriendsProfile()
         uint32_t Id = (*it)->getId();
         QString Profile = (*it)->getProfile();
         int FileCode = DOWNLOADUSERPROFILE;
-        if(!Profile.isEmpty())
+        if(!Profile.isEmpty() && !QFileInfo(UserProfileCachePath(Id, Profile)).isFile())
         {
             item["Id"] = Id;
             item["FileName"] = Profile.toStdString();
@@ -922,7 +970,7 @@ void MainWindow::GetFriendsProfile()
     uint32_t Id = m_Me->getId();
     QString Profile = m_Me->getProfile();
     int FileCode = DOWNLOADUSERPROFILE;
-    if(!Profile.isEmpty())
+    if(!Profile.isEmpty() && !QFileInfo(UserProfileCachePath(Id, Profile)).isFile())
     {
         item["Id"] = Id;
         item["FileName"] = Profile.toStdString();
@@ -940,6 +988,7 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESINFOGROUP, RESUSERSGROUPINFOCODE), std::bind(&MainWindow::ShowUsersGroupInfo, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESINFOGROUP, RESUSERSGROUPMEMBERCODE), std::bind(&MainWindow::ShowUsersGroupMemberList, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESINFOGROUP, RESUSERFILESINFOCODE), std::bind(&MainWindow::ResUserFilesInfo, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESINFOGROUP, RESFRIENDSSTATECODE), std::bind(&MainWindow::UpdateFriendsState, this, std::placeholders::_1));
 
 
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESCHANGEFRIENDOTHERNAMECODE), std::bind(&MainWindow::ChangeUserName, this, std::placeholders::_1));
@@ -948,6 +997,7 @@ void MainWindow::InitHandle()
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESCHANGEFRIENDSGROUPCODE), std::bind(&MainWindow::ChangeFriendsGroup, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESDELUSERSGROUPSOKCODE), std::bind(&MainWindow::DelUsersGroups, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESDELMEMBERSUCCEESCODE), std::bind(&MainWindow::DelGroupMemberSuccess, this, std::placeholders::_1));
+    m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESCHANGEMYSELFINFOCODE), std::bind(&MainWindow::UpdateMyselfInfo, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESCREATENEWUSERSGROUPCODE), std::bind(&MainWindow::AddNewUsersGroup, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESREALADDFRIENDCODE), std::bind(&MainWindow::AddTheNewFriend, this, std::placeholders::_1));
     m_HandleMap.insert(MESSAGETYPE(RESCHANGEGROUP, RESADDMEMBERTOGROUPCODE), std::bind(&MainWindow::AddRemoteNewUsersGroup, this, std::placeholders::_1));
@@ -994,6 +1044,10 @@ void MainWindow::UpdatePos()
     m_NetworkSpaceButton->resize(40, 40);
     m_NetworkSpaceButton->move(0, m_MainBoard->height() - m_NetworkSpaceButton->height());
     m_NetworkSpaceButton->show();
+
+    m_UserDesc->setMaximumSize(m_MainBoard->width() - m_UserDesc->x() - SPACESIZE, m_SerachLineEdit->y() - m_UserDesc->y() - SPACESIZE);
+    m_UserDesc->setMinimumSize(m_MainBoard->width() - m_UserDesc->x() - SPACESIZE, m_SerachLineEdit->y() - m_UserDesc->y() - SPACESIZE);
+    m_UserDesc->setAlignment(Qt::AlignTop);
 }
 
 QImage MainWindow::MatToQImage(cv::Mat &mtx)
@@ -1056,18 +1110,36 @@ void MainWindow::DelGroupItem(uint32_t Id, bool clear)
     }
 }
 
-void MainWindow::AddGroupItem(uint32_t GroupId, uint32_t Id, const QString &Name, const QString &OtherName, const QString &Desc, const QString &Profile, int Sex)
+void MainWindow::AddGroupItem(uint32_t GroupId, uint32_t Id, const QString &Name, const QString &OtherName, const QString &Desc, const QString &Profile, int Sex, int state)
 {
     QTreeWidgetItem *pitem = new QTreeWidgetItem();
     GroupItem *ptable = new GroupItem(nullptr, pitem, Id);
+    qDebug() << __FUNCTION__;
     auto it = m_GroupIdMap->find(GroupId);
     const QString &GroupName = (*it)->getName();
+    qDebug() << __FUNCTION__;
     auto parentIt = m_GroupMap->find(GroupName);
+    qDebug() << __FUNCTION__;
     pitem->setData(0, Qt::UserRole, Id);
     (*parentIt)->addChild(pitem);
-    ptable->setProfile("D:/imggggg.bmp");
-    if(OtherName != "")ptable->setName(OtherName);
-    else ptable->setName(Name);
+    QString ProfileFull = UserProfileCachePath(Id, Profile);
+    if(!Profile.isEmpty() && QFileInfo(ProfileFull).isFile())
+    {
+        ptable->setProfile(ProfileFull);
+    }
+    else
+    {
+        ptable->setProfile("D:/imggggg.bmp");
+    }
+    if(!OtherName.isEmpty())
+    {
+        ptable->setName(OtherName);
+    }
+    else
+    {
+        ptable->setName(Name);
+    }
+    ptable->setState(state);
     ptable->setDesc(Desc);
     ptable->hideDateLabel();
     ptable->hideMessageCountLabel();
@@ -1077,16 +1149,17 @@ void MainWindow::AddGroupItem(uint32_t GroupId, uint32_t Id, const QString &Name
     m_FriendsItemMap.insert(Id, pitem);
     (*parentIt)->setExpanded(true);
     (*it)->addFriend(Id);
-    if(m_FriendsMap->find(Id) == m_FriendsMap->end()) m_FriendsMap->insert(Id, GroupItemInfo::CreateItem(Name, Id, Desc, OtherName, Profile, Sex, GroupId));
+    if(m_FriendsMap->find(Id) == m_FriendsMap->end()) m_FriendsMap->insert(Id, GroupItemInfo::CreateItem(Name, Id, Desc, OtherName, Profile, Sex, GroupId, state));
     connect(ptable, SIGNAL(deleteFriendSign(void*)), this, SLOT(DelGroupItem(void*)));
     connect(ptable, SIGNAL(changeGroupSign(void*)), this, SLOT(ChangeGroupItem(void*)));
     connect(ptable, SIGNAL(changeNameSign(void*)), this, SLOT(ChangeGroupItemName(void*)));
     connect(ptable, SIGNAL(showInfoSign(void*)), this, SLOT(ShowGroupItemInfo(void*)));
+    connect(this, SIGNAL(ReadyChangeProfile(uint32_t,QString)), ptable, SLOT(ChangeProfile(uint32_t,QString)));
 }
 
 void MainWindow::AddGroupItem(uint32_t GroupId, const GroupItemInfoPtr &info)
 {
-    AddGroupItem(GroupId, info->getId(), info->getName(), info->getOtherName(), info->getDesc(), info->getProfile(), info->getSex());
+    AddGroupItem(GroupId, info->getId(), info->getName(), info->getOtherName(), info->getDesc(), info->getProfile(), info->getSex(), info->getState());
 }
 
 
@@ -1135,6 +1208,7 @@ void MainWindow::GetRemoteInfo()
         connect(this, SIGNAL(HasMessage(uint32_t,std::shared_ptr<Message>)), this, SLOT(HandleMessage(uint32_t,std::shared_ptr<Message>)));
         connect(&s, SIGNAL(readyRead()), this, SLOT(MessageRead()));
         GetFriendsProfile();
+        m_UpdateFriendState->start(10000);
         return;
     }
 error:
@@ -1160,6 +1234,11 @@ void MainWindow::CreateChatWindow(uint32_t FriendId)
         m_FriendsChatMap.insert(FriendId, w);
         w->SetDelHandle(std::bind(&MainWindow::DelChatWindow, this, std::placeholders::_1));
         w->show();
+        auto cache = m_ChatInfoCache.find(FriendId);
+        if(cache != m_ChatInfoCache.end())
+        {
+            w->HandleCacheMessage(*cache);
+        }
     }
     else
     {
@@ -1201,9 +1280,14 @@ bool MainWindow::InitMySelf()
         QString Profile = QString::fromStdString(info["Profile"].get<std::string>());
         m_Birthday = QString::fromStdString(info["Birthday"].get<std::string>());
         int Sex = info["Sex"].get<int>();
-        m_Me = GroupItemInfo::CreateObject(Name, m_UserId, Desc, "", Profile, Sex, 0);
+        m_Me = GroupItemInfo::CreateObject(Name, m_UserId, Desc, "", Profile, Sex, 0, 1);
         m_UserName->setText(Name);
         m_UserDesc->setText(Desc);
+        QString FullPath = UserProfileCachePath(m_UserId, Profile);
+        if(!Profile.isEmpty() && QFileInfo(FullPath).isFile())
+        {
+            m_Profile->setPixmap(QPixmap::fromImage(QImage(FullPath)).scaled(m_Profile->size()));
+        }
         return true;
 
     }
@@ -1269,12 +1353,13 @@ bool MainWindow::InitFriends()
             uint32_t Id = Friends[i]["FriendID"].get<json::number_unsigned_t>();
             uint32_t GroupId = Friends[i]["FriendGroupID"].get<json::number_unsigned_t>();
             int Sex = Friends[i]["Sex"].get<int>();
+            int State = Friends[i]["State"].get<int>();
             qDebug() << GroupId << " " << Id << " " << Name << " " << OtherName << " " << Desc << " " << Profile << " " << Sex;
-            AddGroupItem(GroupId, Id, Name, OtherName, Desc, Profile, Sex);
+            AddGroupItem(GroupId, Id, Name, OtherName, Desc, Profile, Sex, State);
             m_ChatInfoCache.insert(Id, std::list<MessagePtr>());
 
         }
-        AddGroupItem(0, 0, "系统消息", "", "", "", 0);
+        AddGroupItem(0, 0, "系统消息", "", "", "", 0, -1);
         return true;
     }
     return false;
@@ -1635,6 +1720,14 @@ void MainWindow::ShowNetworkSpaceWin()
     connect(this, SIGNAL(FileDataBlockRecv(uint64_t,uint32_t,int,int)), w, SLOT(HandleSendOrRecvSignal(uint64_t,uint32_t,int,int)));
     w->show();
 }
+
+
+void MainWindow::ReqFriendsState()
+{
+    auto m = CreateReqFriendsStateMsg(m_UserId, 0);
+    SendtoRemote(s, m);
+}
+
 
 //void MainWindow::UdpSend()
 //{

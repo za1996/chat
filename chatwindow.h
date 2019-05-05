@@ -34,6 +34,8 @@ public:
 
     bool isUdpChatNow() { return m_IsUdpChatNow.load(); }
 
+    void HandleCacheMessage(const std::list<MessagePtr>&);
+
 private:
     Ui::ChatWindow *ui;
     TitleBar *m_TitleBar;

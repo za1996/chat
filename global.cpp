@@ -33,20 +33,20 @@ void UpdateProfileToDatabase(uint32_t id, const QString &FileName)
 {
     QString error_tip  = "%1:[%2]%3";
     QSqlQuery db_operator(db);
-    QString insert_sql = "INSERT OR REPLACE INTO User(Id, Profile) VALUES(%1, '%2');";
-    if(!db_operator.exec(insert_sql.arg(id).arg(FileName)))
+    QString insert_sql = "UPDATE User SET Profile = '%1' WHERE ID = %2;";
+    if(!db_operator.exec(insert_sql.arg(FileName).arg(id)))
     {
         qDebug() << error_tip.arg("insert failed").arg(db_operator.lastError().type()).arg(db_operator.lastError().text());
     }
     db.commit();
 }
 
-void SaveChatMessageToDatabase(uint32_t Src, uint32_t Dest, const QString& msg)
+void SaveChatMessageToDatabase(uint32_t Src, uint32_t Dest, const QString& msg, const QString &Time)
 {
     QString error_tip  = "%1:[%2]%3";
     QSqlQuery db_operator(db);
-    QString insert_sql = "INSERT INTO ChatInfo(Sender, Recvicer, Message) VALUES(%1, %2, '');";
-    if(!db_operator.exec(insert_sql.arg(Src).arg(Dest).arg(msg)))
+    QString insert_sql = "INSERT INTO ChatInfo(Sender, Recvicer, Message, Time) VALUES(%1, %2, '%3', '%4');";
+    if(!db_operator.exec(insert_sql.arg(Src).arg(Dest).arg(msg).arg(Time)))
     {
         qDebug() << error_tip.arg("insert failed").arg(db_operator.lastError().type()).arg(db_operator.lastError().text());
     }
@@ -57,6 +57,11 @@ void SaveChatMessageToDatabase(uint32_t Src, uint32_t Dest, const QString& msg)
 QString UserProfileCachePath(uint32_t id, const QString &FileName)
 {
     return QString("%1/%2/%3/%4").arg(CACHEPATH).arg(id).arg("profile").arg(FileName);
+}
+
+QString UsersGroupProfileCachePath(uint32_t id, const QString &FileName)
+{
+    return QString("%1/%2/%3/%4/%5").arg(CACHEPATH).arg("groups").arg(id).arg("profile").arg(FileName);
 }
 
 int getMessage(QTcpSocket &s, int n, std::list<std::shared_ptr<Message>> &mlist)

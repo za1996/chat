@@ -30,7 +30,8 @@ ChatWindow::ChatWindow(uint32_t Id, uint32_t FriendId, const QString &Name, QWid
     m_VideoWindowLayout(nullptr),
     m_AudioPlayer(nullptr),
     m_IsUdpChatNow(false),
-    m_EmotionWidgetShow(false)
+    m_EmotionWidgetShow(false),
+    m_SaveChatMsg(true)
 {
     ui->setupUi(this);
     this->setWindowFlags(Qt::X11BypassWindowManagerHint | Qt::FramelessWindowHint);
@@ -364,7 +365,7 @@ void ChatWindow::SendChatWordMessage()
         uint64_t time = QDateTime::currentDateTime().toMSecsSinceEpoch();
         auto m = CreateChatWordMsg(m_FriendId, m_MeId, TRANSFERCHATDATAACTION, 0, slist[0].toStdString(), time);
         SendtoRemote(s, m);
-        SaveChatMessageToDatabase(m_MeId, m_FriendId, slist[0]);
+        SaveChatMessageToDatabase(m_MeId, m_FriendId, slist[0], QDateTime::fromMSecsSinceEpoch(time).toString("yyyy-MM-dd hh:mm:ss:zzz"));
         QListWidgetItem *item = new QListWidgetItem(ui->MsgList);
         ChatWindowMessageItem *mItem = new ChatWindowMessageItem(nullptr, true, time, slist[0], ui->MsgList->width());
         qDebug() << "msg : " << slist[0];
@@ -529,6 +530,10 @@ void ChatWindow::RecvChatData(MessagePtr m)
     QString text = QString::fromStdString(info["Msg"].get<std::string>());
     QListWidgetItem *item = new QListWidgetItem(ui->MsgList);
     ChatWindowMessageItem *mItem = new ChatWindowMessageItem(nullptr, false, time, text, ui->MsgList->width());
+    if(m_SaveChatMsg)
+    {
+        SaveChatMessageToDatabase(m_FriendId, m_MeId, text, QDateTime::fromMSecsSinceEpoch(time).toString("yyyy-MM-dd hh:mm:ss:zzz"));
+    }
     mItem->show();
     mItem->UpdateWidth(ui->MsgList->width());
     item->setSizeHint(QSize(0, mItem->height()));
@@ -625,10 +630,12 @@ void ChatWindow::RemoteForceCloseFile(MessagePtr m)
 
 void ChatWindow::HandleCacheMessage(const std::list<MessagePtr> &mlist)
 {
+    m_SaveChatMsg = false;
     for(auto it = mlist.begin(); it != mlist.end(); ++it)
     {
         HandleMessage(m_FriendId, *it);
     }
+    m_SaveChatMsg = true;
 }
 
 

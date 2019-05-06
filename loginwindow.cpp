@@ -278,6 +278,7 @@ void LoginWindow::onShowAccountInfo(QString filePath, QString accountName, QStri
     if(!Password.isEmpty())
     {
         ui->passwordEdit->setText(Password);
+        ui->savePassword->setCheckState(Qt::Checked);
     }
 }
 
@@ -336,6 +337,7 @@ void LoginWindow::onLoginIn()
         {
             Password = "";
         }
+        qDebug() << "sql : " << insert_sql.arg(Id).arg(Password);
         if(!db_operator.exec(insert_sql.arg(Id).arg(Password)))
         {
             qDebug() << error_tip.arg("insert failed").arg(db_operator.lastError().type()).arg(db_operator.lastError().text());

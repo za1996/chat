@@ -4,7 +4,7 @@
 #include <QDateTime>
 
 
-ChatWindowMessageItem::ChatWindowMessageItem(QWidget *parent, bool isMe, uint64_t time, const QString &text, int width) :
+ChatWindowMessageItem::ChatWindowMessageItem(QWidget *parent, bool isMe, uint64_t time, const QString &text, int width, QString UserName) :
     QWidget(parent),
     m_MsgWidget(width, this),
     m_TimerLabel(this),
@@ -12,12 +12,21 @@ ChatWindowMessageItem::ChatWindowMessageItem(QWidget *parent, bool isMe, uint64_
     ui(new Ui::ChatWindowMessageItem)
 {
     ui->setupUi(this);
-    m_TimerLabel.setText(QDateTime::fromMSecsSinceEpoch(time).toString("yyyy-MM-dd hh:mm:ss:zzz"));
+    QString Text;
+    if(UserName.isEmpty())
+    {
+        Text = QDateTime::fromMSecsSinceEpoch(time).toString("yyyy-MM-dd hh:mm:ss:zzz");
+    }
+    else
+    {
+        Text = QString("%1 : %2").arg(UserName).arg(QDateTime::fromMSecsSinceEpoch(time).toString("yyyy-MM-dd hh:mm:ss:zzz"));
+    }
+    m_TimerLabel.setText(Text);
     m_TimerLabel.adjustSize();
     m_TimerLabel.show();
-    m_MsgWidget.show();
+//    m_MsgWidget.show();
     m_MsgWidget.SetText(text);
-    UpdateWidth(width);
+//    UpdateWidth(width);
 //    m_MsgWidget.hide();
 }
 

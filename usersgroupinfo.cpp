@@ -23,7 +23,15 @@ UsersGroupInfo::UsersGroupInfo(QWidget *parent, const QString& Name, uint32_t id
     ui->DescTextEdit->insertHtml(Desc);
     ui->ID->setText(QString("%1").arg(id));
 
-    ui->ProfileLabel->installEventFilter(this);
+    ui->Profile->installEventFilter(this);
+    QString FullPath = UsersGroupProfileCachePath(id, Profile);
+    if(!QFileInfo(FullPath).isFile())
+    {
+        FullPath = "D:/imggggg.bmp";
+    }
+    qDebug() << "path:" << FullPath;
+    ui->Profile->setPixmap(QPixmap::fromImage(QImage(FullPath)).scaled(ui->Profile->size()));
+    qDebug() << ui->Profile->size();
 
 
     m_TitleBar = new TitleBar(this);
@@ -74,7 +82,7 @@ void UsersGroupInfo::paintEvent(QPaintEvent *event)
 
 bool UsersGroupInfo::eventFilter(QObject *watched, QEvent *event)
 {
-    if(watched == ui->ProfileLabel)
+    if(watched == ui->Profile)
     {
         if (event->type() == QEvent::MouseButtonPress)//mouse button pressed
         {
@@ -91,10 +99,19 @@ bool UsersGroupInfo::eventFilter(QObject *watched, QEvent *event)
             }
         }
     }
+    return QWidget::eventFilter(watched, event);
 }
 
 void UsersGroupInfo::SendChangeUsersGroupInfo()
 {
     auto m = CreateChangeUsersGroupInfoMsg(m_ThisIsId, 0, m_GroupId, ui->NameLineEdit->text(), ui->DescTextEdit->toPlainText());
     SendtoRemote(s, m);
+}
+
+void UsersGroupInfo::ChangeProfile(uint32_t id, const QString &FullPath)
+{
+    if(id == m_GroupId)
+    {
+        ui->Profile->setPixmap(QPixmap::fromImage(QImage(FullPath)).scaled(ui->Profile->size()));
+    }
 }

@@ -52,7 +52,8 @@ SOURCES += \
     systemmessagewin.cpp \
     systemmessageitem.cpp \
     registerwin.cpp \
-    networkspacewin.cpp
+    networkspacewin.cpp \
+    groupchatwin.cpp
 
 HEADERS += \
         loginwindow.h \
@@ -83,7 +84,8 @@ HEADERS += \
     systemmessagewin.h \
     systemmessageitem.h \
     registerwin.h \
-    networkspacewin.h
+    networkspacewin.h \
+    groupchatwin.h
 
 FORMS += \
         loginwindow.ui \
@@ -98,7 +100,8 @@ FORMS += \
     systemmessagewin.ui \
     systemmessageitem.ui \
     registerwin.ui \
-    networkspacewin.ui
+    networkspacewin.ui \
+    groupchatwin.ui
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../openCV/opencv/build/x64/vc15/lib/ -lopencv_world401
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../openCV/opencv/build/x64/vc15/lib/ -lopencv_world401d

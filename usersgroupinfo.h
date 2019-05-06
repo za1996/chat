@@ -26,8 +26,12 @@ private:
     TitleBar *m_TitleBar;
     uint32_t m_GroupId;
     ProfileUploadWin *m_ProfileWin;
+//    QLabel *m_Profile;
 private slots:
     void SendChangeUsersGroupInfo();
+
+public slots:
+    void ChangeProfile(uint32_t , const QString&);
 };
 
 #endif // USERSGROUPINFO_H

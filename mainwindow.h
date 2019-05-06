@@ -25,6 +25,8 @@
 #include "deleteusersgroupmemberwin.h"
 #include "tcpfilethread.h"
 #include "tcpfilerecvicer.h"
+#include "usersgroupitem.h"
+#include "groupchatwin.h"
 
 class MainWindow : public QWidget
 {
@@ -73,8 +75,11 @@ private:
     std::list<uint32_t> m_UdpChatList;
 
     QHash<uint32_t, QListWidgetItem *> m_UsersGroupMap;
+    QHash<uint32_t, UserGroupInfo> m_UsersGroupInfoMap;
     QHash<uint32_t, DeleteUsersGroupMemberWin*> m_DEUGMWindowMap;
     QHash<uint32_t, std::list<MessagePtr>> m_ChatInfoCache;
+
+    QHash<uint32_t, GroupChatWin *> m_GroupChatWinMap;
 
 
 
@@ -111,7 +116,7 @@ private:
     void GetFriendsProfile();
     void AddGroupItem(uint32_t GroupId, uint32_t Id, const QString &Name, const QString &OtherName, const QString &Desc, const QString &Profile, int Sex, int state);
     void AddGroupItem(uint32_t GroupId, const GroupItemInfoPtr& info);
-    void AddUsersGroupItem(uint32_t UsersGroupId, const QString& GroupName, const QString GroupDesc, const QString& GroupProfile, bool);
+    void AddUsersGroupItem(uint32_t UsersGroupId, const QString& GroupName, const QString &GroupDesc, const QString& GroupProfile, bool);
     void DelGroupItem(uint32_t Id, bool clear = true);
     void hideWidget();
     void showWidget();
@@ -173,6 +178,7 @@ signals:
     void FileDataBlockRecv(uint64_t, uint32_t, int, int);
     void FileDataBlockSend(uint64_t, uint32_t, int, int);
     void ReadyChangeProfile(uint32_t, QString);
+    void ReadyChangeGroupProfile(uint32_t, QString);
     void FileTransferEnd(uint64_t);
     void ResSendToServer(MessagePtr);
     void UserFileSendOrDownloadEnd(uint64_t);
@@ -206,6 +212,7 @@ private slots:
     void WantToJoinInOtherGroup();
     void ShowNetworkSpaceWin();
     void ReqFriendsState();
+    void DoubleClickUserGroupItem(QListWidgetItem*);
 };
 
 extern MainWindow *m_MainWin;

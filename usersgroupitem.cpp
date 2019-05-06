@@ -2,9 +2,10 @@
 #include <QPainter>
 #include <QDebug>
 
-UsersGroupItem::UsersGroupItem(bool isAdmin, QWidget *parent) :
+UsersGroupItem::UsersGroupItem(uint32_t GroupId, bool isAdmin, QWidget *parent) :
     QWidget(parent),
-    m_isAdmin(isAdmin)
+    m_isAdmin(isAdmin),
+    m_GroupId(GroupId)
 {
     this->setMinimumSize(240, HEIGHT + 10);
     this->setMaximumHeight(HEIGHT + 10);
@@ -113,4 +114,13 @@ void UsersGroupItem::resizeEvent(QResizeEvent *event)
     m_Date->setGeometry(this->width() - HEIGHT, 0, HEIGHT, HEIGHT / 2);
     m_MsgCount->setGeometry(this->width() - HEIGHT, HEIGHT / 2, HEIGHT, HEIGHT / 2);
     this->QWidget::resizeEvent(event);
+}
+
+//public slots
+void UsersGroupItem::ChangeProfile(uint32_t id, const QString &Profile)
+{
+    if(id == m_GroupId)
+    {
+        m_Profile->setPixmap(QPixmap::fromImage(QImage(Profile)).scaled(m_Profile->size()));
+    }
 }

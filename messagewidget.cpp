@@ -10,7 +10,8 @@ MessageWidget::MessageWidget(int width, QWidget *parent) :
     this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->setWindowFlags(Qt::FramelessWindowHint);
-    this->resize(20, width);
+    this->resize(width, 200);
+    qDebug() << "width : " << width;
     this->setReadOnly(true);
     this->setStyleSheet("background:transparent;border-width:0;border-style:outset");
 }
@@ -37,6 +38,15 @@ void MessageWidget::areaChanged(int width)
             end = this->cursorRect();
             qDebug("New Cursor Start Pos : %d %d %d %d\n", start.x(), start.y(), start.width(), start.height());
             qDebug("New Cursor End Pos : %d %d %d %d\n", end.x(), end.y(), end.width(), end.height());
+            int len = end.x() - start.x();
+            if(onOneLine(start, end) && len < width - 10)
+            {
+                this->setMinimumWidth(len + 10);
+                this->setMaximumWidth(len + 10);
+            }
+        }
+        else
+        {
             int len = end.x() - start.x();
             if(onOneLine(start, end) && len < width - 10)
             {

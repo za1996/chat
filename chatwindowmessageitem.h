@@ -19,7 +19,7 @@ protected:
     void paintEvent(QPaintEvent *event);
 
 public:
-    explicit ChatWindowMessageItem(QWidget *parent, bool isMe, uint64_t time, const QString &text, int width);
+    explicit ChatWindowMessageItem(QWidget *parent, bool isMe, uint64_t time, const QString &text, int width, QString UserName = "");
     ~ChatWindowMessageItem();
 
     void UpdateWidth(int width);

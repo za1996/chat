@@ -4,7 +4,6 @@
 #include "message.h"
 #include "global.h"
 #include "chatwindow.h"
-#include "usersgroupitem.h"
 #include <nlohmann/json.hpp>
 #include "groupiteminfo.h"
 #include "usersgroupinfo.h"
@@ -174,6 +173,7 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
     connect(m_NetworkSpaceButton, SIGNAL(clicked(bool)), this, SLOT(ShowNetworkSpaceWin()));
     connect(this, SIGNAL(ReadyChangeProfile(uint32_t,QString)), this, SLOT(ChangeProfile(uint32_t,QString)));
     connect(m_UpdateFriendState, SIGNAL(timeout()), this, SLOT(ReqFriendsState()));
+    connect(m_UsersGroupList, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(DoubleClickUserGroupItem(QListWidgetItem*)));
     qDebug() << "TitleBar Height" << m_TitleBar->height() << endl;
 
 //    QTreeWidgetItem *pRootFriendItem = new QTreeWidgetItem();
@@ -274,9 +274,9 @@ void MainWindow::CloseSendFileNum(uint64_t FileNum, bool force)
             {
                 emit UserFileSendOrDownloadEnd(FileNum);
             }
-            else
+            else if(it->FileCode == UPLOADUSERSGROUPPROFILE)
             {
-
+                emit ReadyChangeGroupProfile(it->Id, QString::fromStdString(it->FileName));
             }
         }
         m_SendFileMap.erase(it);
@@ -307,6 +307,10 @@ void MainWindow::CloseDownloadFileNum(uint64_t FileNum, bool force)
             else if(it->FileCode == DOWNLOADUSERFILE)
             {
                 emit UserFileSendOrDownloadEnd(FileNum);
+            }
+            else if(it->FileCode == DOWNLOADUSERSGROUPPROFILE)
+            {
+                emit ReadyChangeGroupProfile(it->Id, UsersGroupProfileCachePath(it->Id, QString::fromStdString(it->Name)));
             }
         }
         else
@@ -615,6 +619,10 @@ void MainWindow::RecvChatData(MessagePtr m)
             auto FriendItem = dynamic_cast<GroupItem *>(m_GroupTree->itemWidget((*item), 0));
             assert(FriendItem != nullptr);
             FriendItem->setMessageCount((*it).size());
+            json info = json::parse((char *)m->data());
+            uint64_t time = info["time"].get<json::number_unsigned_t>();
+            QString text = QString::fromStdString(info["Msg"].get<std::string>());
+            SaveChatMessageToDatabase(m->srcId(), m->destId(), text, QDateTime::fromMSecsSinceEpoch(time).toString("yyyy-MM-dd hh:mm:ss:zzz"));
         }
     }
 }
@@ -637,6 +645,7 @@ void MainWindow::DelUsersGroups(MessagePtr m)
                 delete it.value();
                 m_UsersGroupMap.erase(it);
             }
+            m_UsersGroupInfoMap.remove(id);
 
         }
 
@@ -652,6 +661,7 @@ void MainWindow::ShowUsersGroupInfo(MessagePtr m)
     uint32_t id = info["GroupId"].get<json::number_unsigned_t>();
     uint32_t admin = info["AdminId"].get<json::number_unsigned_t>();
     UsersGroupInfo *w = new UsersGroupInfo(nullptr, Name, id, Desc, Profile, admin == m_UserId);
+    connect(this, SIGNAL(ReadyChangeGroupProfile(uint32_t,QString)), w, SLOT(ChangeProfile(uint32_t,QString)));
     w->show();
 }
 
@@ -736,6 +746,10 @@ void MainWindow::DownloadFileData(MessagePtr m)
         if(FileCode == DOWNLOADUSERPROFILE)
         {
             Path = QString("%1/%2/%3/").arg(CACHEPATH).arg(Id).arg("profile").toStdString();
+        }
+        else if(FileCode == DOWNLOADUSERSGROUPPROFILE)
+        {
+            Path = QString("%1/%2/%3/%4/").arg(CACHEPATH).arg("groups").arg(Id).arg("profile").toStdString();
         }
         else
         {
@@ -952,6 +966,20 @@ void MainWindow::GetFriendsProfile()
     json info;
     info["Friends"] = json::array();
     info["UsersGroups"] = json::array();
+    for(auto it = m_UsersGroupInfoMap.begin(); it != m_UsersGroupInfoMap.end(); ++it)
+    {
+        json item;
+        uint32_t Id = it->Id;
+        QString Profile = it->Profile;
+        int FileCode = DOWNLOADUSERSGROUPPROFILE;
+        if(!Profile.isEmpty() && !QFileInfo(UsersGroupProfileCachePath(Id, Profile)).isFile())
+        {
+            item["Id"] = Id;
+            item["FileName"] = Profile.toStdString();
+            item["FileCode"] = FileCode;
+            info["UsersGroups"].push_back(item);
+        }
+    }
     for(auto it = m_FriendsMap->begin(); it != m_FriendsMap->end(); ++it)
     {
         json item;
@@ -977,6 +1005,7 @@ void MainWindow::GetFriendsProfile()
         item["FileCode"] = FileCode;
         info["Friends"].push_back(item);
     }
+
     auto m = CreateReqDownloadProfile(m_UserId, 0, info);
     SendtoRemote(s, m);
 }
@@ -1176,11 +1205,19 @@ void MainWindow::AddUserGroup(const QString &Name, uint32_t GroupID)
     m_GroupIdMap->insert(GroupID, GroupItemInfo::CreateGroupItem(Name, GroupID));
 }
 
-void MainWindow::AddUsersGroupItem(uint32_t UsersGroupId, const QString &GroupName, const QString GroupDesc, const QString &GroupProfile, bool isAdmin)
+void MainWindow::AddUsersGroupItem(uint32_t UsersGroupId, const QString &GroupName, const QString& GroupDesc, const QString &GroupProfile, bool isAdmin)
 {
     QListWidgetItem *plitem = new QListWidgetItem();
-    UsersGroupItem *item = new UsersGroupItem(isAdmin);
-    item->setProfile("D:/imggggg.bmp");
+    UsersGroupItem *item = new UsersGroupItem(UsersGroupId, isAdmin);
+    QString ProfileFull = UsersGroupProfileCachePath(UsersGroupId, GroupProfile);
+    if(!GroupProfile.isEmpty() && QFileInfo(ProfileFull).isFile())
+    {
+        item->setProfile(ProfileFull);
+    }
+    else
+    {
+        item->setProfile("D:/imggggg.bmp");
+    }
     item->setDesc(GroupDesc);
     item->setName(GroupName);
     item->hideDateLabel();
@@ -1196,6 +1233,8 @@ void MainWindow::AddUsersGroupItem(uint32_t UsersGroupId, const QString &GroupNa
     {
         connect(item->m_changeGroupMember, SIGNAL(triggered(bool)) ,this, SLOT(RemoveUsersGroupMember()));
     }
+    m_UsersGroupInfoMap.insert(UsersGroupId, UserGroupInfo(UsersGroupId, isAdmin, GroupName, GroupDesc, GroupProfile));
+    connect(this, SIGNAL(ReadyChangeGroupProfile(uint32_t,QString)), item, SLOT(ChangeProfile(uint32_t,QString)));
 
 }
 
@@ -1238,6 +1277,7 @@ void MainWindow::CreateChatWindow(uint32_t FriendId)
         if(cache != m_ChatInfoCache.end())
         {
             w->HandleCacheMessage(*cache);
+            cache->clear();
         }
     }
     else
@@ -1729,6 +1769,28 @@ void MainWindow::ReqFriendsState()
 {
     auto m = CreateReqFriendsStateMsg(m_UserId, 0);
     SendtoRemote(s, m);
+}
+
+void MainWindow::DoubleClickUserGroupItem(QListWidgetItem *item)
+{
+    uint32_t GroupId = item->data(Qt::UserRole).value<uint32_t>();
+    auto it = m_GroupChatWinMap.find(GroupId);
+    if(it != m_GroupChatWinMap.end())
+    {
+        (*it)->raise();
+    }
+    else
+    {
+        GroupChatWin *w = new GroupChatWin(GroupId, m_Me->getName());
+        auto info = m_UsersGroupInfoMap.find(GroupId);
+        assert(info != m_UsersGroupInfoMap.end());
+        if(info != m_UsersGroupInfoMap.end())
+        {
+            w->SetTitleName(info->Name);
+        }
+        w->show();
+        m_GroupChatWinMap.insert(GroupId, w);
+    }
 }
 
 

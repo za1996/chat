@@ -51,6 +51,7 @@ private:
     QTimer m_ShowVideoTimer;
     AudioPlayer *m_AudioPlayer;
     bool m_EmotionWidgetShow;
+    bool m_SaveChatMsg;
     QHash<uint64_t, QFileInfo> m_ReadySendFile;
 
     QHash<uint32_t, std::function<void(MessagePtr)>> m_HandleMap;

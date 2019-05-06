@@ -8,6 +8,8 @@
 GroupChatWin::GroupChatWin(uint32_t GroupId, const QString UserName, QWidget *parent) :
     QWidget(parent),
     m_UserName(UserName),
+    m_GroupId(GroupId),
+    m_DelHandle(nullptr),
     ui(new Ui::GroupChatWin)
 {
     ui->setupUi(this);
@@ -66,6 +68,8 @@ GroupChatWin::GroupChatWin(uint32_t GroupId, const QString UserName, QWidget *pa
 GroupChatWin::~GroupChatWin()
 {
     delete ui;
+    if(m_DelHandle)m_DelHandle(m_GroupId);
+    delete m_EmotionWidget;
 }
 
 void GroupChatWin::ShowEmotionWidget()
@@ -126,20 +130,21 @@ void GroupChatWin::SendChatWordMessage()
     if(slist.size() && slist[0] != "<br />")
     {
         uint64_t time = QDateTime::currentDateTime().toMSecsSinceEpoch();
-//        auto m = CreateChatWordMsg(m_FriendId, m_MeId, TRANSFERCHATDATAACTION, 0, slist[0].toStdString(), time);
-//        SendtoRemote(s, m);
-        QListWidgetItem *item = new QListWidgetItem(ui->MsgList);
-        qDebug() << "msglist width : " << ui->MsgList->width();
-        ChatWindowMessageItem *mItem = new ChatWindowMessageItem(nullptr, true, time, slist[0], ui->MsgList->width(), m_UserName);
-        qDebug() << "msg : " << slist[0];
-        mItem->show();
-        qDebug() << "mitem height " << mItem->height();
-        mItem->UpdateWidth(ui->MsgList->width());
-        item->setSizeHint(QSize(0, mItem->height()));
-        ui->MsgList->addItem(item);
-        ui->MsgList->setItemWidget(item, mItem);
-        ui->MsgEdit->clear();
-        ui->MsgList->scrollToBottom();
+        auto m = CreateUserGroupChatMsg(m_ThisIsId, 0, m_ThisIsId, m_GroupId, time, m_UserName, slist[0]);
+        SendtoRemote(s, m);
+//        QListWidgetItem *item = new QListWidgetItem(ui->MsgList);
+//        qDebug() << "msglist width : " << ui->MsgList->width();
+//        ChatWindowMessageItem *mItem = new ChatWindowMessageItem(nullptr, true, time, slist[0], ui->MsgList->width(), m_UserName);
+//        qDebug() << "msg : " << slist[0];
+//        mItem->show();
+//        qDebug() << "mitem height " << mItem->height();
+//        mItem->UpdateWidth(ui->MsgList->width());
+//        item->setSizeHint(QSize(0, mItem->height()));
+//        ui->MsgList->addItem(item);
+//        ui->MsgList->setItemWidget(item, mItem);
+//        ui->MsgEdit->clear();
+//        ui->MsgList->scrollToBottom();
+        AddMsgItem(time, m_UserName, slist[0], true);
     }
 }
 
@@ -154,4 +159,45 @@ void GroupChatWin::AddEmotion(int row, int col)
     QString html = QString("<img src=\"%1\" height=\"30\" width=\"30\">").arg(filepath);
     ui->MsgEdit->insertHtml(html);
     m_EmotionWidget->hide();
+}
+
+void GroupChatWin::SetDelHandle(std::function<void (uint32_t)> f)
+{
+    m_DelHandle = f;
+}
+
+void GroupChatWin::HandleChatMsg(uint32_t GroupId, const QString &UserName, const QString &Msg, uint64_t Time)
+{
+    if(m_GroupId == GroupId)
+    {
+        AddMsgItem(Time, UserName, Msg, false);
+    }
+}
+
+void GroupChatWin::AddMsgItem(uint64_t Time, const QString& UserName, const QString& Msg, bool Me)
+{
+    QListWidgetItem *item = new QListWidgetItem(ui->MsgList);
+    qDebug() << "msglist width : " << ui->MsgList->width();
+    ChatWindowMessageItem *mItem = new ChatWindowMessageItem(nullptr, Me, Time, Msg, ui->MsgList->width(), UserName);
+    qDebug() << "msg : " << Msg;
+    mItem->show();
+    qDebug() << "mitem height " << mItem->height();
+    mItem->UpdateWidth(ui->MsgList->width());
+    item->setSizeHint(QSize(0, mItem->height()));
+    ui->MsgList->addItem(item);
+    ui->MsgList->setItemWidget(item, mItem);
+    ui->MsgEdit->clear();
+    ui->MsgList->scrollToBottom();
+}
+
+void GroupChatWin::HandleCacheMsg(const std::list<MessagePtr>& mlist)
+{
+    for(auto it = mlist.begin(); it != mlist.end(); ++it)
+    {
+        json info = json::parse((char *)(*it)->data());
+        uint64_t Time = info["Time"].get<json::number_unsigned_t>();
+        QString UserName = QString::fromStdString(info["UserName"].get<std::string>());
+        QString Msg = QString::fromStdString(info["ChatMsg"].get<std::string>());
+        AddMsgItem(Time, UserName, Msg, false);
+    }
 }

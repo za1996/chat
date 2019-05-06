@@ -80,6 +80,7 @@ private:
     QHash<uint32_t, std::list<MessagePtr>> m_ChatInfoCache;
 
     QHash<uint32_t, GroupChatWin *> m_GroupChatWinMap;
+    QHash<uint32_t, std::list<MessagePtr>> m_GroupChatCache;
 
 
 
@@ -132,6 +133,7 @@ private:
     void InitHandle();
     void CreateChatWindow(uint32_t);
     void DelChatWindow(uint32_t);
+    void DelGroupChatWindow(uint32_t GroupId);
     void UdpSendToRemote(uint32_t FriendId, int PacketNum, const char *data, int size);
     QImage MatToQImage(cv::Mat &mtx);
     void DownloadFile();
@@ -162,6 +164,7 @@ private:
     void ResUserFilesInfo(MessagePtr);
     void UpdateFriendsState(MessagePtr);
     void UpdateMyselfInfo(MessagePtr);
+    void HandleUsersGroupMsg(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);
@@ -184,6 +187,7 @@ signals:
     void UserFileSendOrDownloadEnd(uint64_t);
     void NetworkSpaceRefresh(MessagePtr);
     void ResRecvFromServer(MessagePtr);
+    void HasUserGroupMsg(uint32_t, const QString& UserName, const QString& Msg, uint64_t Time);
 
 private slots:
     void onGroupItemClick(QTreeWidgetItem *pitem, int col);

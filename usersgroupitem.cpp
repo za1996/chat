@@ -78,6 +78,16 @@ void UsersGroupItem::setDate(const QString &date)
 
 void UsersGroupItem::setMessageCount(const int count)
 {
+    QString text;
+    if(count > 99)
+    {
+        text = "99+";
+    }
+    else
+    {
+        text = QString("%1").arg(count);
+    }
+    m_MsgCount->setText(text);
     m_MsgCount->show();
 }
 

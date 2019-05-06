@@ -57,6 +57,7 @@ MessagePtr CreateSendUserFileToServerEndMsg(uint32_t srcID, uint32_t flag, uint6
 MessagePtr CreateReqFriendsStateMsg(uint32_t srcID, uint32_t flag);
 MessagePtr CreateReqFilesInfoMsg(uint32_t srcID, uint32_t flag);
 MessagePtr CreateFindPasswordMsg(uint32_t flag, uint32_t UserId, const std::string& Answer);
+MessagePtr CreateUserGroupChatMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t GroupId, uint64_t Time, const QString& UserName, const QString& ChatMsg);
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg);
 
 typedef std::shared_ptr<UdpPacket> UdpPacketPtr;

@@ -32,7 +32,7 @@ QSqlDatabase db;
 void UpdateProfileToDatabase(uint32_t id, const QString &FileName)
 {
     QString error_tip  = "%1:[%2]%3";
-    QSqlQuery db_operator(db);
+    static QSqlQuery db_operator(db);
     QString insert_sql = "UPDATE User SET Profile = '%1' WHERE ID = %2;";
     if(!db_operator.exec(insert_sql.arg(FileName).arg(id)))
     {
@@ -44,7 +44,7 @@ void UpdateProfileToDatabase(uint32_t id, const QString &FileName)
 void SaveChatMessageToDatabase(uint32_t Src, uint32_t Dest, const QString& msg, const QString &Time)
 {
     QString error_tip  = "%1:[%2]%3";
-    QSqlQuery db_operator(db);
+    static QSqlQuery db_operator(db);
     QString insert_sql = "INSERT INTO ChatInfo(Sender, Recvicer, Message, Time) VALUES(%1, %2, '%3', '%4');";
     if(!db_operator.exec(insert_sql.arg(Src).arg(Dest).arg(msg).arg(Time)))
     {
@@ -531,6 +531,20 @@ MessagePtr CreateFindPasswordMsg(uint32_t flag, uint32_t UserId, const std::stri
     info["Answer"] = Answer;
     auto m = Message::CreateObject();
     m->setHead(REQID, SERVERID, LOGINEVENTGROUP, REQFINDPASSWORDACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateUserGroupChatMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t GroupId, uint64_t Time, const QString& UserName, const QString& ChatMsg)
+{
+    json info;
+    info["UserId"] = UserId;
+    info["GroupId"] = GroupId;
+    info["UserName"] = UserName.toStdString();
+    info["Time"] = Time;
+    info["ChatMsg"] = ChatMsg.toStdString();
+    auto m = Message::CreateObject();
+    m->setHead(srcID, SERVERID, TRANSFERDATAGROUP, TRANSFERUSERSGROUPMSGACTION, flag);
     m->setData(info.dump());
     return m;
 }

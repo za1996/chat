@@ -4,6 +4,7 @@
 #include "chatwindowmessageitem.h"
 #include <QKeyEvent>
 #include <QStringList>
+#include <QPainter>
 
 GroupChatWin::GroupChatWin(uint32_t GroupId, const QString UserName, QWidget *parent) :
     QWidget(parent),
@@ -198,6 +199,29 @@ void GroupChatWin::HandleCacheMsg(const std::list<MessagePtr>& mlist)
         uint64_t Time = info["Time"].get<json::number_unsigned_t>();
         QString UserName = QString::fromStdString(info["UserName"].get<std::string>());
         QString Msg = QString::fromStdString(info["ChatMsg"].get<std::string>());
+        qDebug() << __FUNCTION__ << " " << Msg;
         AddMsgItem(Time, UserName, Msg, false);
     }
+}
+
+void GroupChatWin::paintEvent(QPaintEvent *event)
+{
+    QPainterPath path;
+    path.setFillRule(Qt::WindingFill);
+    path.addRect(10, 10, this->width()-20, this->height()-20);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.fillPath(path, QBrush(Qt::white));
+
+    QColor color(0, 0, 0, 50);
+    for(int i=0; i<10; i++)
+    {
+        QPainterPath path;
+        path.setFillRule(Qt::WindingFill);
+        path.addRect(10-i, 10-i, this->width()-(10-i)*2, this->height()-(10-i)*2);
+        color.setAlpha(150 - qSqrt(i)*50);
+        painter.setPen(color);
+        painter.drawPath(path);
+    }
+    this->QWidget::paintEvent(event);
 }

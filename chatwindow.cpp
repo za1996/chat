@@ -213,6 +213,7 @@ void ChatWindow::ReqVideoChat()
         ui->MainLayout->addLayout(m_VideoWindowLayout);
         auto m = CreateReqUdpChatMsg(m_FriendId, m_MeId, REQUDPCHATACTION, 0);
         SendtoRemote(s, m);
+        m_VideoWindow->show();
     }
 
 }
@@ -266,6 +267,7 @@ void ChatWindow::RemoveVideoChat()
 //    this->resize(ui->MsgEdit->width(), this->height());
     this->resize(this->width() - m_VideoWindow->width(), this->height());
     delete m_AudioPlayer;
+    m_VideoWindow->hide();
     emit ChatWindowUdpChatEnd(m_FriendId);
 }
 

@@ -38,16 +38,18 @@ void UdpRecvicer::run()
     m_UdpVideoDataTimer = new QTimer;
     m_UdpSendAddrTimer = new QTimer;
     m_UdpAudioDataTimer = new QTimer;
+    bool VideoOk = true;
+    bool AudioOk = true;
     connect(m_UdpVideoDataTimer, SIGNAL(timeout()), this, SLOT(UdpVideoSend()));
     connect(&m_UdpSocket, SIGNAL(readyRead()), this, SLOT(UdpRecv()));
     connect(m_UdpSendAddrTimer, SIGNAL(timeout()), this, SLOT(SendAddr()));
     connect(m_UdpAudioDataTimer, SIGNAL(timeout()), this, SLOT(UdpAudioSend()));
     m_UdpSocket.setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 1024 * 1024 * 10);
     cam = new VideoCapture();
-    if(!cam->open(0))
+    if(!cam->open(0 + CAP_DSHOW))
     {
         qDebug() << "Start Video failed";
-        return;
+        VideoOk = false;
     }
     cam->set(CAP_PROP_FRAME_WIDTH, 320);
     cam->set(CAP_PROP_FRAME_HEIGHT, 240);
@@ -57,14 +59,20 @@ void UdpRecvicer::run()
     {
         //未检测到输入设备， 你的电脑可能没有插麦克风
         qDebug() << "Start microphone failed! Please check if you have an input device!";
-        return;
+        AudioOk = false;
     }
 //    m_VideoLabel.move(20, 20);
 //    m_VideoLabel.resize(320, 240);
 //    m_VideoLabel.show();
     m_UdpSendAddrTimer->start(500);
-    m_UdpVideoDataTimer->start(130);
-    m_UdpAudioDataTimer->start(110);
+    if(VideoOk)
+    {
+        m_UdpVideoDataTimer->start(130);
+    }
+    if(AudioOk)
+    {
+        m_UdpAudioDataTimer->start(110);
+    }
     this->exec();
 }
 
@@ -103,20 +111,28 @@ void UdpRecvicer::SendAddr()
 void UdpRecvicer::UdpVideoSend()
 {
     qDebug() << __FUNCTION__;
+    qDebug() << __FUNCTION__ << " test2";
     if(m_StartSendData)
     {
-//        qDebug() << __FUNCTION__;
+        qDebug() << __FUNCTION__ << " test";
         static int count = 0;
-        if(m_FriendId == 1001)
-        {
-            return;
-        }
         Mat frame;
         std::vector<uchar> buff;
         std::vector<int> param = std::vector<int>(2);
-        cam->read(frame);
+
+        if(!cam->read(frame))
+        {
+            qDebug() << "read error";
+            return;
+        }
+        qDebug() << "read success";
+//        cam->grab();
+//        if(!cam->retrieve(frame, 0))
+//        {
+//            qDebug() << "grab error";
+//        }
         param[0] = IMWRITE_JPEG_QUALITY;
-        param[1] = 30;
+        param[1] = 10;
         imencode(".jpg", frame, buff, param);
 
         qDebug() << "Video Size : " << buff.size();
@@ -146,10 +162,6 @@ void UdpRecvicer::UdpAudioSend()
     qDebug() << __FUNCTION__;
     if(m_StartSendData)
     {
-        if(m_FriendId == 1001)
-        {
-            return;
-        }
         static int count = 0;
         static char audioBuffer[CAPTURE_SIZE];
         ALint samples;

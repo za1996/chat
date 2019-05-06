@@ -137,6 +137,7 @@ private:
     void UdpSendToRemote(uint32_t FriendId, int PacketNum, const char *data, int size);
     QImage MatToQImage(cv::Mat &mtx);
     void DownloadFile();
+    void EraseUsersGroupItem(uint32_t GroupId);
 
 
     void ShowUserInfo(MessagePtr);
@@ -165,6 +166,7 @@ private:
     void UpdateFriendsState(MessagePtr);
     void UpdateMyselfInfo(MessagePtr);
     void HandleUsersGroupMsg(MessagePtr);
+    void HandleChangeUserGroupInfo(MessagePtr);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *ev);

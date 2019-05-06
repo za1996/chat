@@ -17,6 +17,8 @@ RegisterWin::RegisterWin(QWidget *parent) :
     ui->AgainLineEdit->setValidator(validator);
     ui->PwLineEdit->setMaxLength(16);
     ui->AgainLineEdit->setMaxLength(16);
+    ui->PwLineEdit->setEchoMode(QLineEdit::Password);
+    ui->AgainLineEdit->setEchoMode(QLineEdit::Password);
     this->setWindowTitle("注册");
     connect(ui->CancelButton, SIGNAL(clicked(bool)), this, SLOT(close()));
     connect(ui->OKButton, SIGNAL(clicked(bool)), this, SLOT(Register()));

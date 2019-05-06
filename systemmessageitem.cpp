@@ -78,9 +78,11 @@ void SystemMessageItem::OnOKClick()
     }
     else if(m_SysMsgCache[m_MsgNum].m->Type() == MESSAGETYPE(TRANSFERDATAGROUP, REQJOININGROUPACTION))
     {
+        qDebug() << __FUNCTION__ << " add member";
         json info = json::parse((char *)m_SysMsgCache[m_MsgNum].m->data());
         uint32_t UserId = info["UserId"].get<json::number_unsigned_t>();
         uint32_t GroupId = info["GroupId"].get<json::number_unsigned_t>();
+        qDebug() << UserId << " " << GroupId;
         m = CreateAddMemberToGroupMsg(m_ThisIsId, 0, UserId, GroupId);
     }
     else

@@ -103,7 +103,7 @@ void LoginWindow::init()
 
     // 密码行初始化
     ui->passwordEdit->setPlaceholderText("密码");
-//    ui->passwordEdit->setEchoMode(QLineEdit::Password);
+    ui->passwordEdit->setEchoMode(QLineEdit::Password);
 
     // 初始化信号和槽的绑定
     // do something...

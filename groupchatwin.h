@@ -34,6 +34,7 @@ private:
 
 protected:
     bool eventFilter(QObject *target, QEvent *event);
+    void paintEvent(QPaintEvent *event);
 
 private slots:
     void ShowEmotionWidget();

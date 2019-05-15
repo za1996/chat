@@ -38,6 +38,7 @@ NetworkSpaceWin::NetworkSpaceWin(QWidget *parent) :
     connect(m_TitleBar, SIGNAL(signalButtonCloseClicked()), this, SLOT(close()));
     connect(m_RefreshFiles, SIGNAL(triggered(bool)), this, SLOT(RefreshFileInfo()));
     connect(ui->DownloadButton, SIGNAL(clicked(bool)), this, SLOT(DownloadFileByServer()));
+    connect(ui->DelButton, SIGNAL(clicked(bool)), this, SLOT(DelSpaceFile()));
 
     RefreshFileInfo();
 
@@ -101,6 +102,7 @@ void NetworkSpaceWin::AddFileTransferItem(uint64_t FileNum, bool isUpload, int F
     ui->TransferInfoListWidget->setItemWidget(item, fitem);
     m_FileTransferItemMap.insert(FileNum, item);
 //    connect(fitem, SIGNAL(CancelFile(uint64_t)), this, SLOT(ForceCloseFile(uint64_t)));
+    connect(fitem, SIGNAL(CancelFile(uint64_t)), this, SLOT(ForceCloseRemoteFile(uint64_t)));
     qDebug() << __FUNCTION__ << " FileSize: " << FileSize;
     fitem->show();
 }
@@ -187,5 +189,40 @@ void NetworkSpaceWin::HandleReqRecvMessage(MessagePtr m)
         AddFileTransferItem(FileNum, false, Size, it->fileName());
         m_MainWin->AddDownloadFile(FileNum, item);
         m_ReadyDownloadFile.erase(it);
+    }
+}
+
+void NetworkSpaceWin::DelSpaceFile()
+{
+    auto item = ui->FileListWidget->currentItem();
+    QLabel *label = dynamic_cast<QLabel *>(ui->FileListWidget->itemWidget(item));
+    if(label)
+    {
+        auto m = CreateDelNetworkSpaceFileMsg(m_ThisIsId, 0, m_ThisIsId, label->text());
+        SendtoRemote(s, m);
+    }
+}
+
+void NetworkSpaceWin::ForceCloseRemoteFile(uint64_t FileNum)
+{
+    auto item = m_FileTransferItemMap.find(FileNum);
+    if(item != m_FileTransferItemMap.end())
+    {
+        auto m = CreateForceCloseRemoteFileMsg(m_ThisIsId, 0, FileNum);
+        SendtoRemote(s, m);
+        FileWidgetItem* p = dynamic_cast<FileWidgetItem*>(ui->TransferInfoListWidget->itemWidget(*item));
+        assert(p != nullptr);
+        if(p)
+        {
+            if(p->IsUpload())
+            {
+                m_MainWin->CloseSendFileNum(FileNum, true);
+            }
+            else
+            {
+                m_MainWin->CloseDownloadFileNum(FileNum, true);
+            }
+            p->TransferOver(false);
+        }
     }
 }

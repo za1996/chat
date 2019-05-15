@@ -94,12 +94,26 @@
      </rect>
     </property>
    </widget>
+   <widget class="QPushButton" name="DelButton">
+    <property name="geometry">
+     <rect>
+      <x>160</x>
+      <y>470</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>删除</string>
+    </property>
+   </widget>
    <zorder>SpaceButton</zorder>
    <zorder>TransferInfoButton</zorder>
    <zorder>DownloadButton</zorder>
    <zorder>UploadButton</zorder>
    <zorder>TransferInfoListWidget</zorder>
    <zorder>FileListWidget</zorder>
+   <zorder>DelButton</zorder>
   </widget>
  </widget>
  <resources/>

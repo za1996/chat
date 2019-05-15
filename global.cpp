@@ -549,6 +549,27 @@ MessagePtr CreateUserGroupChatMsg(uint32_t srcID, uint32_t flag, uint32_t UserId
     return m;
 }
 
+MessagePtr CreateDelNetworkSpaceFileMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, const QString& FileName)
+{
+    json info;
+    info["UserId"] = UserId;
+    info["FileName"] = FileName.toStdString();
+    auto m = Message::CreateObject();
+    m->setHead(srcID, SERVERID, CHANGEINFOGROUP, DELNETWORKSPACEFILEAVTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
+MessagePtr CreateForceCloseRemoteFileMsg(uint32_t srcID, uint32_t flag, uint64_t FileNum)
+{
+    json info;
+    info["FileNum"] = FileNum;
+    auto m = Message::CreateObject();
+    m->setHead(srcID, SERVERID, TRANSFERDATAGROUP, FORCECLOSENETWORKFILEACTION, flag);
+    m->setData(info.dump());
+    return m;
+}
+
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg)
 {
     auto m = Message::CreateObject();

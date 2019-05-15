@@ -58,6 +58,8 @@ MessagePtr CreateReqFriendsStateMsg(uint32_t srcID, uint32_t flag);
 MessagePtr CreateReqFilesInfoMsg(uint32_t srcID, uint32_t flag);
 MessagePtr CreateFindPasswordMsg(uint32_t flag, uint32_t UserId, const std::string& Answer);
 MessagePtr CreateUserGroupChatMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, uint32_t GroupId, uint64_t Time, const QString& UserName, const QString& ChatMsg);
+MessagePtr CreateDelNetworkSpaceFileMsg(uint32_t srcID, uint32_t flag, uint32_t UserId, const QString& FileName);
+MessagePtr CreateForceCloseRemoteFileMsg(uint32_t srcID, uint32_t flag, uint64_t FileNum);
 MessagePtr CreateTestMessage(uint32_t srcID, uint32_t flag, const std::string &msg);
 
 typedef std::shared_ptr<UdpPacket> UdpPacketPtr;
@@ -82,7 +84,7 @@ extern QVector<SysMsgCacheItem> m_SysMsgCache;
 extern QSqlDatabase db;
 //#define UDP_MAX_SIZE 14336
 #define UDP_MAX_SIZE 1436
-#define UDP_MAX_DELAY 200
+#define UDP_MAX_DELAY 2000
 #define TIMEMAGICNUMER 60000
 #define AUDIO_FREQ 8000
 #define CACHEPATH "E:/University_Final_Text_Qt_Project/cache"

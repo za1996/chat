@@ -14,7 +14,7 @@ void TcpFileRecvicer::run()
     m_Socket = new QTcpSocket();
     qDebug() << "run start";
 
-    m_Socket->connectToHost("129.204.4.80", 8888);
+    m_Socket->connectToHost("129.204.126.195", 8888);
     if(!m_Socket->waitForConnected())
     {
         qDebug() << "connect error";

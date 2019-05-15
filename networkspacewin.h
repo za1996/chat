@@ -38,6 +38,8 @@ private slots:
     void SendFileToServer();
     void RefreshFileInfo();
     void DownloadFileByServer();
+    void DelSpaceFile();
+    void ForceCloseRemoteFile(uint64_t);
 
 public slots:
     void HandleReqSendMessage(MessagePtr);

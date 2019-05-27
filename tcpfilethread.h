@@ -17,7 +17,6 @@ public:
     void SetUserId(uint32_t Id) { m_UserId = Id; }
     void run();
     void send(uint64_t FileNum);
-    void AddFile(uint64_t FileNum, uint32_t Id, int FileCode, std::string FileName);
     void SendedSignal(uint64_t FileNum, uint32_t Id, int FileCode, int Size);
 
 private:
@@ -36,9 +35,13 @@ private:
 signals:
     void ReadySend(uint64_t, uint32_t);
 
+public slots:
+    void AddFile(uint64_t FileNum, uint32_t Id, int FileCode, std::string FileName);
+
 private slots:
     void read();
     void RealSend(uint64_t , uint32_t);
+    void timeslot();
 };
 
 #endif // TCPFILETHREAD_H

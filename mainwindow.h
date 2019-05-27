@@ -190,6 +190,7 @@ signals:
     void NetworkSpaceRefresh(MessagePtr);
     void ResRecvFromServer(MessagePtr);
     void HasUserGroupMsg(uint32_t, const QString& UserName, const QString& Msg, uint64_t Time);
+    void AddFileToSend(uint64_t FileNum, uint32_t Id, int FileCode, std::string FileName);
 
 private slots:
     void onGroupItemClick(QTreeWidgetItem *pitem, int col);

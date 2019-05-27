@@ -203,6 +203,8 @@ MainWindow::MainWindow(uint32_t UserId, QWidget *parent) :
 //    QThread::sleep(1);
     WaitForRead(s, Cache, 1);
     qDebug() << "start m_TcpFileRecvicer";
+    QThread::sleep(1);
+    QObject::connect(this, SIGNAL(AddFileToSend(uint64_t,uint32_t,int,std::string)), m_TcpFile, SLOT(AddFile(uint64_t,uint32_t,int,std::string)), Qt::QueuedConnection);
     InitHandle();
     GetRemoteInfo();
     InitDir();
@@ -238,7 +240,8 @@ void MainWindow::EmitSendFileData(uint64_t FileNum, uint32_t Id, int FileCode, i
 
 void MainWindow::AddSendFile(uint64_t FileNum, uint32_t Id, int FileCode, std::string FileName)
 {
-    m_TcpFile->AddFile(FileNum, Id, FileCode, FileName);
+//    m_TcpFile->AddFile(FileNum, Id, FileCode, FileName);
+    emit AddFileToSend(FileNum, Id, FileCode, FileName);
 }
 
 void MainWindow::AddDownloadFile(uint64_t FileNum, const DowloadFileItem &info)
@@ -706,7 +709,9 @@ void MainWindow::ReadySendProfile(MessagePtr m)
     if(it != m_ClientFileNumMap.end())
     {
         m_RemoteFileNumMap.insert(FileNum, *it);
-        m_TcpFile->AddFile(FileNum, Id, code, *it);
+//        m_TcpFile->AddFile(FileNum, Id, code, *it);
+        qDebug() << __FUNCTION__ << "thread id : " << QThread::currentThreadId();
+        emit AddFileToSend(FileNum, Id, code, *it);
         m_ClientFileNumMap.erase(it);
     }
 

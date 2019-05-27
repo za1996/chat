@@ -85,7 +85,7 @@ void UdpRecvicer::UdpSendToRemote(uint32_t FriendId, int PacketNum, const char *
     {
         int PacketSize = (start + UDP_MAX_SIZE) <= size ? UDP_MAX_SIZE : (size - start);
         auto m = CreateUdpChatMsg(FriendId, m_MeId, UDPTRANSFERMSG | action, 0, (data + start), size, start, PacketSize, PacketNum, time);
-        m_UdpSocket.writeDatagram((char *)m->tobuf(), m->size(), QHostAddress("129.204.126.195"), m_Port);
+        m_UdpSocket.writeDatagram((char *)m->tobuf(), m->size(), QHostAddress("129.204.4.80"), m_Port);
     }
 
 
@@ -99,7 +99,7 @@ void UdpRecvicer::SendAddr()
     for(int i = 0; i < 10; i++)
     {
         auto m = CreateUdpChatMsg(m_FriendId, m_MeId, UDPADDENDPOINT, 0, "asdasdasdasdasdasdasdasd");
-        m_UdpSocket.writeDatagram((char *)m->tobuf(), m->size(), QHostAddress("129.204.126.195"), m_Port);
+        m_UdpSocket.writeDatagram((char *)m->tobuf(), m->size(), QHostAddress("129.204.4.80"), m_Port);
     }
     if(!m_StartSendData)
     {

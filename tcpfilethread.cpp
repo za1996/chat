@@ -2,6 +2,7 @@
 #include "message.h"
 #include "mainwindow.h"
 
+#include <QMetaObject>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
@@ -9,17 +10,20 @@ TcpFileThread::TcpFileThread() :
     m_UserId(0),
     m_Socket(nullptr)
 {
+    moveToThread(this);
     m_mutex = new QMutex();
 }
 
 void TcpFileThread::run()
 {
     m_Socket = new QTcpSocket();
+    QTimer *timer = new QTimer;
+    connect(timer, SIGNAL(timeout()), this, SLOT(timeslot()), Qt::QueuedConnection);
     qDebug() << "run start";
     m_FileEmpty.notify_one();
 
     qDebug() << "run end";
-    m_Socket->connectToHost("129.204.126.195", 8888);
+    m_Socket->connectToHost("129.204.4.80", 8888);
     if(!m_Socket->waitForConnected())
     {
         qDebug() << "connect error";
@@ -52,12 +56,15 @@ void TcpFileThread::run()
 //        qDebug() << "send error";
 //    }
 //    send();
+    qDebug() << __FUNCTION__ << "thread id : " << QThread::currentThreadId();
     connect(this, SIGNAL(ReadySend(uint64_t,uint32_t)), this, SLOT(RealSend(uint64_t,uint32_t)));
+    timer->start(1000);
     this->exec();
 }
 
 void TcpFileThread::send(uint64_t FileNum)
 {
+    qDebug() << __FUNCTION__;
     emit ReadySend(FileNum, 4096);
 }
 
@@ -93,6 +100,7 @@ void TcpFileThread::AddFile(uint64_t FileNum, uint32_t Id, int FileCode, std::st
 
 bool TcpFileThread::SendtoRemote(MessagePtr m)
 {
+    qDebug() << __FUNCTION__ << "thread id : " << QThread::currentThreadId();
     if(m_Socket->state() != QAbstractSocket::ConnectedState) return false;
     int size = m_Socket->write((char *)m->tobuf(), m->size());
     if(size != m->size()) return false;
@@ -119,6 +127,7 @@ void TcpFileThread::RealSend(uint64_t FileNum, uint32_t Size)
     if(fit != m_FileNumOpenSendMap.end() && sit != m_SendFileMap.end())
     {
         MessagePtr m;
+        qDebug() << __FUNCTION__;
         if((*sit).NowLength >= (*sit).Length)
         {
             //发送完 发送完成包
@@ -139,7 +148,8 @@ void TcpFileThread::RealSend(uint64_t FileNum, uint32_t Size)
             {
                 return;
             }
-            SendtoRemote(m);
+            QMetaObject::invokeMethod(this, std::bind(&TcpFileThread::SendtoRemote, this, m));
+//            SendtoRemote(m);
             m_MainWin->CloseSendFileNum((*sit).RemoteFileNum, false);
         }
         else
@@ -153,7 +163,8 @@ void TcpFileThread::RealSend(uint64_t FileNum, uint32_t Size)
             {
                 m = CreateFileDataUploadMsg(m_UserId, 0, buffer, realbyte, FileNum);
             }
-            SendtoRemote(m);
+//            SendtoRemote(m);
+            QMetaObject::invokeMethod(this, std::bind(&TcpFileThread::SendtoRemote, this, m));
             (*sit).NowLength += realbyte;
             SendedSignal(FileNum, (*sit).Id, (*sit).FileCode, realbyte);
         }
@@ -163,4 +174,9 @@ void TcpFileThread::RealSend(uint64_t FileNum, uint32_t Size)
         m_FileNumOpenSendMap.remove(FileNum);
         m_SendFileMap.remove(FileNum);
     }
+}
+
+void TcpFileThread::timeslot()
+{
+    qDebug() << __FUNCTION__ << "thread id : " << QThread::currentThreadId();
 }
